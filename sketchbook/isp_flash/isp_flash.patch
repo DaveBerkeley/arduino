@@ -1,0 +1,31 @@
+--- /home/dave/arduino/arduino-1.0/libraries/JeeLib/examples/Ports/isp_flash/isp_flash.ino	2012-07-05 09:06:34.000000000 +0100
++++ isp_flash.ino	2012-10-07 14:01:02.255496509 +0100
+@@ -41,7 +41,7 @@
+ int here;           // address for reading and writing, set by 'U' command
+ byte data[256];     // global block storage
+ 
+-struct {
++struct param {
+     byte devicecode;
+     byte revision;
+     byte progtype;
+@@ -215,9 +215,18 @@ static byte write_eeprom(int length) {
+     return STK_OK;
+ }
+ 
++static void flash_led(int n)
++{
++  if (!n)
++    return;
++  delay(5000);
++  flash_led(n / 10);
++}
++
+ static void program_page() {
+-    char result = STK_FAILED;
++    char result = STK_FAILED;   
+     int length = 256 * getch();
++flash_led(length);
+     length += getch();
+     if (length > 256) {
+         putch(STK_FAILED);
