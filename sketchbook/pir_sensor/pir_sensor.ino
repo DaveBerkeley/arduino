@@ -30,7 +30,7 @@
 
 static const char* banner = "PIR Device v1.0";
 
-#define WITH_TEMP
+//#define WITH_TEMP
 
 // node -> gateway data
 #define PRESENT_PIR         (1 << 0)
@@ -251,7 +251,6 @@ void loop()
     } else {
       // go back to ...
       sleep();
-      changes += 1; // dddddddddd
     }
     return;
   }

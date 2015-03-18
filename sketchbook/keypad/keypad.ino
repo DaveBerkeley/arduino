@@ -165,7 +165,6 @@ void loop () {
   }
 
   if (send_status && rf12_canSend()) {
-  Serial.println("x");
     tx.set(2);
 
     //send_text(banner, make_mid(), false);
