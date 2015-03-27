@@ -1,5 +1,8 @@
 
 
+// http://playground.arduino.cc/Code/Timer1
+#include <TimerOne.h>
+
 // set pin numbers:
 static const int pins[4] = { 2, 3, 4, 5 };
 
@@ -14,6 +17,46 @@ static void relay(int i, bool set)
   /*
   *
   */
+
+static long pulses[4];
+
+static void pulse(int device, long period)
+{
+  relay(device, 1);
+  noInterrupts();
+  pulses[device] = period;
+  interrupts();
+}
+
+static void on_timer()
+{
+  for (int i = 0; i < 4; i++) {
+    if (!pulses[i])
+      continue;
+    if (--pulses[i])
+      continue;
+    relay(i, 0);
+  }
+}
+
+  /*
+  *
+  */
+
+static long read_int(const char* txt)
+{
+  long num = 0;
+  
+  while (*txt) {
+    const char c = *txt++;
+    if ((c < '0') || (c > '9'))
+      return -1;
+    num *= 10;
+    num += c - '0';    
+  }
+  
+  return num;
+}
 
 static int read_command(const char* cmd)
 {
@@ -35,10 +78,15 @@ static int read_command(const char* cmd)
     case '?' :  //  query
       break;
       
-    case 'P' :
-      // pulse
+    case 'P' :  //  pulse
+    {
+      const long p = read_int(cmd);
+      if (p == -1)
+        return -1;
+      cmd = "";
+      pulse(device, p);
       break;
-      
+    } 
     case 'T' :  //  toggle
       if (*cmd != '\0')
         return -1;
@@ -102,6 +150,9 @@ void setup()
     pinMode(pins[i], OUTPUT);
     relay(i, 0);
   }
+  
+  Timer1.initialize(1000);
+  Timer1.attachInterrupt(on_timer, 1000);
 }
 
 void loop()
