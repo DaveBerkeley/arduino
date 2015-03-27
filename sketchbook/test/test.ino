@@ -1,6 +1,6 @@
 
 /*
- Copyright (C) 2012 Dave Berkeley solar@rotwang.co.uk
+ Copyright (C) 2014 Dave Berkeley projects2@rotwang.co.uk
 
  This program is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
@@ -28,15 +28,10 @@
 
 static const char* banner = "Test Device v1.0";
 
-#define WITH_TEMP
-
 // node -> gateway data
-#define PRESENT_PIR         (1 << 0)
-#ifdef WITH_TEMP
 #define PRESENT_TEMPERATURE (1 << 1)
 
 #define TEMPERATURE_PIN 3
-#endif
 
 Port pir(1);
 Port led(2);
@@ -78,16 +73,10 @@ static void test_led(byte on)
   led.digiWrite2(!on);
 }
 
-static bool get_pir()
-{
-  return !pir.digiRead3();
-}
-
  /*
   *  Temperature 
   */
 
-#ifdef WITH_TEMP
 static const float temp_scale = (1.1 * 100) / 1024;
 
 static int get_temperature(int pin) {
@@ -95,7 +84,6 @@ static int get_temperature(int pin) {
   const float t = temp_scale * analog;
   return int(t * 100);
 }
-#endif
 
  /*
   * Fall into a deep sleep
@@ -103,14 +91,8 @@ static int get_temperature(int pin) {
 
 static uint16_t sleep_count = 0;
 
-// 60000 is supposed to give 1 minute,
-// but seems to give around 0.14055 minutes
-// 6*60 gives 00:50:37. Why?
-// On another board * 426 
-// gives 01:05:59 not 01:00:00
-#define SLEEP_TIME 60000 // 1 minute
-
-static const int ONE_HOUR = int(7.1146 * 60);
+#define SLEEP_TIME (32000)
+static const int LONG_WAIT = 1;
 
 static void sleep(uint16_t time=SLEEP_TIME)
 {
@@ -121,18 +103,6 @@ static void sleep(uint16_t time=SLEEP_TIME)
   state = SLEEP;
   //Serial.flush(); // wait for output to complete
   Sleepy::loseSomeTime(time);
-}
-
- /*
-  * Interrupt handler. Wakes the unit out of sleep
-  */
-
-static uint16_t changes = 0;
-
-static void on_change()
-{
-  // PIR interrupt to wake up the unit
-  changes += 1;
 }
 
  /*
@@ -147,13 +117,8 @@ void make_message(Message* msg, int msg_id, bool ack)
   if (ack)
     msg->set_ack();
 
-  uint8_t pir = get_pir();
-  msg->append(PRESENT_PIR, & pir, sizeof(pir));
-
-#ifdef WITH_TEMP
   const uint16_t t = get_temperature(TEMPERATURE_PIN);
   msg->append(PRESENT_TEMPERATURE, & t, sizeof(t));
-#endif
 }
 
  /*
@@ -175,15 +140,10 @@ void setup()
   Serial.begin(57600);
   Serial.println(banner);
 
-  my_node = rf12_config(0);
+  my_node = rf12_configSilent();
 
-#ifdef WITH_TEMP
   // use the 1.1V internal ref for the ADC
   analogReference(INTERNAL);
-#endif
-
-  // PIR interrupt
-  attachInterrupt(IRQ, on_change, CHANGE);
 
   state = START;
 }
@@ -194,10 +154,11 @@ void setup()
 
 void loop()
 {
+  static uint16_t changes = 0;
+  
   ok_led(1); // show we are awake
 
   if (rf12_recvDone() && (rf12_crc == 0)) {
-
     Message m((void*) & rf12_data[0]);
 
     if (m.get_dest() == my_node) {
@@ -233,6 +194,7 @@ void loop()
     static uint16_t last_changes = -1;
     if (changes != last_changes) {
       // PIR sensor has changed state
+      Serial.println("send");
       last_changes = changes;
       state = SENDING;
       retries = ACK_RETRIES;
@@ -244,12 +206,11 @@ void loop()
     }
 
     // we've woken from sleep with no changes
-    if (++sleep_count >= ONE_HOUR) {
+    if (++sleep_count >= LONG_WAIT) {
       state = START;
     } else {
       // go back to ...
       sleep();
-      changes += 1; // dddddddddd
     }
     return;
   }
