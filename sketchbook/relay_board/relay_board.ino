@@ -108,7 +108,7 @@ static int read_command(const char* cmd)
   Serial.print(device);
   Serial.print("=");
   Serial.print(state[device]);
-  Serial.print("\n");
+  Serial.print("\r\n");
 }
 
 static int get_serial()
@@ -120,6 +120,7 @@ static int get_serial()
     return -1;
 
   const int c = Serial.read();
+  Serial.print(char(c));
 
   buff[idx++] = c;
   if (idx >= (sizeof(buff)-1)) {
