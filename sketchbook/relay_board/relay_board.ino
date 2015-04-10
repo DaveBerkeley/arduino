@@ -7,10 +7,13 @@
 static const int pins[4] = { 2, 3, 4, 5 };
 
 static int state[4];
+static long pulses[4];
+static bool next_state[4];
 
 static void relay(int i, bool set)
 {
   state[i] = set;
+  pulses[i] = 0;
   digitalWrite(pins[i], !set);
 }
 
@@ -18,13 +21,12 @@ static void relay(int i, bool set)
   *
   */
 
-static long pulses[4];
-
-static void pulse(int device, long period)
+static void xpulse(int device, long period, bool on)
 {
-  relay(device, 1);
+  relay(device, on);
   noInterrupts();
   pulses[device] = period;
+  next_state[device] = !on;
   interrupts();
 }
 
@@ -35,7 +37,7 @@ static void on_timer()
       continue;
     if (--pulses[i])
       continue;
-    relay(i, 0);
+    relay(i, next_state[i]);
   }
 }
 
@@ -79,12 +81,13 @@ static int read_command(const char* cmd)
       break;
       
     case 'P' :  //  pulse
+    case 'N' :  //  neg-pulse
     {
       const long p = read_int(cmd);
       if (p == -1)
         return -1;
       cmd = "";
-      pulse(device, p);
+      xpulse(device, p, c == 'P');
       break;
     } 
     case 'T' :  //  toggle
