@@ -1,6 +1,6 @@
 
 /*
- Copyright (C) 2014 Dave Berkeley projects2@rotwang.co.uk
+ Copyright (C) 2015 Dave Berkeley projects2@rotwang.co.uk
 
  This program is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
@@ -31,7 +31,7 @@ static const char* banner = "Test Device v1.0";
 // node -> gateway data
 #define PRESENT_TEMPERATURE (1 << 1)
 
-#define TEMPERATURE_PIN 3
+#define TEMPERATURE_PIN 0
 
 Port pir(1);
 Port led(2);
@@ -191,11 +191,11 @@ void loop()
   }
 
   if (state == SLEEP) {
-    static uint16_t last_changes = -1;
-    if (changes != last_changes) {
+    //static uint16_t last_changes = -1;
+    //if (changes != last_changes) {
       // PIR sensor has changed state
       Serial.println("send");
-      last_changes = changes;
+      //last_changes = changes;
       state = SENDING;
       retries = ACK_RETRIES;
       sleep_count = 0;
@@ -203,16 +203,16 @@ void loop()
       // turn the radio on
       rf12_sleep(-1);
       return;
-    }
+    //}
 
     // we've woken from sleep with no changes
-    if (++sleep_count >= LONG_WAIT) {
-      state = START;
-    } else {
-      // go back to ...
-      sleep();
-    }
-    return;
+    //if (++sleep_count >= LONG_WAIT) {
+    //  state = START;
+    //} else {
+    //  // go back to ...
+    //  sleep();
+    //}
+    //return;
   }
 
   if (state == SENDING) {
