@@ -40,9 +40,9 @@ void loop()
   // We're using a constant called ALTITUDE in this sketch:
   
   Serial.println();
-  Serial.print("provided altitude: ");
+  Serial.print("alt,");
   Serial.print(ALTITUDE,0);
-  Serial.println(" m");
+  Serial.print(",");
   
   // If you want to measure altitude, and not pressure, you will instead need
   // to provide a known baseline pressure. This is shown at the end of the sketch.
@@ -74,10 +74,10 @@ void loop()
   }
 
   // Print out the measurement:
-  Serial.print("temperature: ");
+  Serial.print("temp,");
   Serial.print(T,2);
-  Serial.println(" deg C");
-  
+  Serial.println(",");
+
   // Start a pressure measurement:
   // The parameter is the oversampling setting, from 0 to 3 (highest res, longest wait).
   // If request is successful, the number of ms to wait is returned.
@@ -107,9 +107,9 @@ void loop()
   }
 
   // Print out the measurement:
-  Serial.print("absolute pressure: ");
+  Serial.print("p,");
   Serial.print(P,2);
-  Serial.println(" mb");
+  Serial.println(",");
 
   // The pressure sensor returns abolute pressure, which varies with altitude.
   // To remove the effects of altitude, use the sealevel function and your current altitude.
