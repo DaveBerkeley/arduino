@@ -76,7 +76,7 @@ void loop()
   // Print out the measurement:
   Serial.print("temperature: ");
   Serial.print(T,2);
-  Serial.print(" deg C");
+  Serial.println(" deg C");
   
   // Start a pressure measurement:
   // The parameter is the oversampling setting, from 0 to 3 (highest res, longest wait).
