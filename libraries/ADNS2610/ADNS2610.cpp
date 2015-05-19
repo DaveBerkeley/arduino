@@ -40,9 +40,8 @@ void dumpDiag(void)
   val = readRegister(regStatus);
 
   Serial.print("Product ID: ");
-  Serial.println( (unsigned int)((val & maskPID) >> 5));
-  Serial.println("Ready.");
-  Serial.flush();
+  Serial.print( (unsigned int)((val & maskPID) >> 5));
+  Serial.print("\nOkay\n");
 }
 
 void writeRegister(byte addr, byte data)

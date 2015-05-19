@@ -20,9 +20,8 @@ void setup()
   pinMode(SDIO, OUTPUT);
   pinMode(LED, OUTPUT);
 
-  Serial.begin(38400);
-  Serial.println("Serial established.");
-  Serial.flush();
+  Serial.begin(19200);
+  Serial.print("ADNS2610\n");
 
   mouseInit();
   dumpDiag();
@@ -36,25 +35,14 @@ void loop()
   readFrame(frame);
   flipLED();
 
-  if( Serial.available() )
+  for(int i = 0; i < FRAMELENGTH; i++)
   {
-    input = Serial.read();
-    switch( input )
-    {
-    case 'f':
-      Serial.println("Frame capture.");
-      readFrame(frame);
-      flipLED();
-      Serial.println("Done.");
-      break;
-    case 'd':
-      for( input = 0; input < FRAMELENGTH; input++ )  //Reusing 'input' here
-        Serial.print( (byte) frame[input] );
-      Serial.print( (byte)127 );
-      break;
-    }
-    Serial.flush();
+    //Serial.print((int) frame[i]);
+    //Serial.print(",");
+    Serial.print((char) frame[i]);
   }
+  //Serial.print("\n");
+  Serial.print(char(127));
 }
 
 // FIN
