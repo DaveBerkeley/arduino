@@ -101,7 +101,7 @@ byte readRegister(byte addr)
 
 
 //ADNS2610 dumps a 324-byte array, so this function assumes arr points to a buffer of at least 324 bytes.
-void readFrame(byte *arr, void (*flipLED)())
+void readFrame(byte *arr)
 {
   byte *pos;
   byte *uBound;
@@ -138,9 +138,6 @@ void readFrame(byte *arr, void (*flipLED)())
     *pos = val & 63;
     pos++;
   }
-
-  if (flipLED)
-      flipLED();
 }
 
 //  FIN

@@ -6,7 +6,7 @@
 
 void mouseInit();
 void dumpDiag();
-void readFrame(byte *arr, void(*flipLED)());
+void readFrame(byte *arr);
 void writeRegister(byte addr, byte data);
 byte readRegister(byte addr);
 
