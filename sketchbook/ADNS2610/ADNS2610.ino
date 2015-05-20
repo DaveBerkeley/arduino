@@ -35,6 +35,7 @@ void loop()
     Serial.flush();
   }
   Serial.print(char(0x80)); // end of frame marker
+  delay(100);
 }
 
 // FIN
