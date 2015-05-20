@@ -21,10 +21,11 @@ def log(*args):
 #
 
 def init_serial():
+    baud = 9600
     log("open serial '%s'" % serial_dev)
-    s = serial.Serial(serial_dev, baudrate=19200, timeout=1, rtscts=True)
+    s = serial.Serial(serial_dev, baudrate=baud, timeout=1, rtscts=True)
 
-    log("serial opened")
+    log("serial opened @ %d" % baud)
     return s
 
 #
@@ -42,7 +43,7 @@ if __name__ == "__main__":
     size = 18
     scale = 20
     # frame buffer 18x18
-    fb = numpy.zeros((size, size), numpy.int)
+    fb = numpy.zeros((size, size), numpy.uint8)
 
     frame = 0
     pixel = 0
@@ -65,9 +66,10 @@ if __name__ == "__main__":
         else:
             if pixel >= (size * size):
                 continue
-            fb[pixel/18][pixel%18] = ord(c)
+            #c = chr(pixel%256)
+            # remap to match mouse mapping
+            fb[(size-1)-(pixel%size)][pixel/size] = ord(c)
             pixel += 1
-
 
     cv2.destroyAllWindows()
 
