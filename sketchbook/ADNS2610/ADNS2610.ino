@@ -7,13 +7,6 @@
 
 byte frame[FRAMELENGTH];
 
-void flipLED(void)
-{
-  static byte state = false;
-  state = !state;
-  digitalWrite(LED, state ? HIGH : LOW);
-}
-
 void setup()
 {
   pinMode(SCLK, OUTPUT);
@@ -29,20 +22,19 @@ void setup()
 
 void loop()
 {
-  unsigned int s;
-  int input;  
+  static bool led_state = false;
 
   readFrame(frame);
-  flipLED();
+  // toggle LED
+  led_state = !led_state;
+  digitalWrite(LED, led_state ? HIGH : LOW);
 
   for(int i = 0; i < FRAMELENGTH; i++)
   {
-    //Serial.print((int) frame[i]);
-    //Serial.print(",");
-    Serial.print((char) frame[i]);
+    Serial.print((char) (frame[i] & 0x3F));
+    Serial.flush();
   }
-  //Serial.print("\n");
-  Serial.print(char(127));
+  Serial.print(char(0x80)); // end of frame marker
 }
 
 // FIN
