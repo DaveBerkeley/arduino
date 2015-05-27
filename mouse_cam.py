@@ -1,6 +1,7 @@
 #!/usr/bin/python
 
 import time
+import optparse
 
 import serial
 
@@ -35,10 +36,15 @@ def getkey():
     return cv2.waitKey(1) & 0xFF
 
 if __name__ == "__main__":
-    serial_dev = "/dev/nano"
+    p = optparse.OptionParser()
+    p.add_option("-d", "--dev", dest="dev", default="/dev/nano")
+    p.add_option("-t", "--test", dest="test", action="store_true")
+    opts, args = p.parse_args()
+    
+    serial_dev = opts.dev
     s = init_serial()
 
-    cv2.namedWindow("camera", 1)
+    cv2.namedWindow("mouse", 1)
 
     size = 18
     scale = 20
@@ -55,9 +61,8 @@ if __name__ == "__main__":
         if ord(c[0]) & 0x80: # end of frame
             print "frame", frame, pixel, size * size
             frame += 1
-            #print fb
             image = scipy.misc.imresize(fb, (size * scale, size * scale))
-            cv2.imshow("camera", image)
+            cv2.imshow("mouse", image)
             pixel = 0
 
             if getkey() == 27: # ESC
@@ -66,7 +71,8 @@ if __name__ == "__main__":
         else:
             if pixel >= (size * size):
                 continue
-            #c = chr(pixel%256)
+            if opts.test:
+                c = chr(pixel%256)
             # remap to match mouse mapping
             fb[(size-1)-(pixel%size)][pixel/size] = ord(c)
             pixel += 1
