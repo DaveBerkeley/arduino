@@ -1,5 +1,6 @@
 
 
+//#include <Arduino.h>
 #include <SoftwareSerial.h>
 #include <JeeLib.h>
 #include <radionet.h>
@@ -8,13 +9,19 @@
 #define tx 1
 SoftwareSerial serial(rx, tx);
 
+#if defined(__AVR_ATtiny84__)
+SerialX Serial(serial);
+#endif
+
 static char pins[] = {
   2,
-  3, 
-  7,  
-  10,
+  //3, 
+  //7,  
+  //10,
   -1,
 };
+
+static const char* banner = "Tiny Device v1.0";
 
 void setup() {
 
@@ -25,7 +32,8 @@ void setup() {
     pinMode(pins[i], OUTPUT);    
   }
 
-  serial.begin(9600);
+  Serial.begin(9600);  
+  Serial.println(banner);
 }
 
 void loop() {
@@ -38,8 +46,8 @@ void loop() {
     digitalWrite(pins[i], (state & (1 << i)) ? HIGH : LOW);
   }
   state += 1;
-  serial.print(state);
-  serial.print("\r\n");
+  Serial.print(state);
+  Serial.print("\r\n");
 }
 
 // FIN

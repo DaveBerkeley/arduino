@@ -27,14 +27,48 @@
 #if defined(__AVR_ATtiny84__)
 
 // get around the "Serial was not declared" compile errors
+// by using the SoftwareSerial library.
+
+#include <Arduino.h>
+#include <SoftwareSerial.h>
 
 class SerialX : public Stream
 {
-  size_t write(uint8_t);
-  int available();
-  int peek();
-  void flush();
-  int read();
+private:
+    SoftwareSerial& ss;
+
+public:
+    SerialX(SoftwareSerial& s) : ss(s) { }
+
+    void begin(uint32_t baud)
+    {
+        ss.begin(baud);
+    }
+
+    size_t write(uint8_t c)
+    {
+        return ss.write(c);
+    }
+
+    int available()
+    {
+        return ss.available();
+    }
+
+    int peek()
+    {
+        return ss.peek();
+    }
+
+    void flush()
+    {
+        ss.flush();
+    }
+
+    int read()
+    {
+        return ss.read();
+    }
 };
 
 extern SerialX Serial;
