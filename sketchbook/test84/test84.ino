@@ -1,14 +1,14 @@
 
 
 #include <SoftwareSerial.h>
+#include <JeeLib.h>
+#include <radionet.h>
 
 #define rx 0
 #define tx 1
 SoftwareSerial serial(rx, tx);
 
 static char pins[] = {
-  //0, 
-  //1,
   2,
   3, 
   7,  
@@ -41,3 +41,5 @@ void loop() {
   serial.print(state);
   serial.print("\r\n");
 }
+
+// FIN

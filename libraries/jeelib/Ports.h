@@ -24,6 +24,24 @@
 #define WRITE_RESULT void
 #endif
 
+#if defined(__AVR_ATtiny84__)
+
+// get around the "Serial was not declared" compile errors
+
+class SerialX : public Stream
+{
+  size_t write(uint8_t);
+  int available();
+  int peek();
+  void flush();
+  int read();
+};
+
+extern SerialX Serial;
+
+#endif
+
+
 /// Interface for JeeNode Ports - see the wiki docs for
 /// [JeeNodes](http://jeelabs.net/projects/hardware/wiki/JeeNode) and
 /// [pinouts](http://jeelabs.net/projects/hardware/wiki/Pinouts).
