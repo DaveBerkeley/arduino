@@ -414,7 +414,11 @@ static void handleInput (char c) {
         }
 
         case 'g': // set network group
-            config.group = value;
+            Serial.print("group ");
+            Serial.print(value);
+            Serial.print("\r\n");
+			Serial.print("force t 6!\r\n");
+            config.group = 6; // value;
             saveConfig();
             break;
 
@@ -559,7 +563,7 @@ void setup () {
     } else {
         memset(&config, 0, sizeof config);
         config.nodeId = 0x81;       // 868 MHz, node 1
-        config.group = 0xD4;        // default group 212
+        config.group = 6; // 0xD4;        // default group 212
         config.frequency_offset = 1600;
         config.quiet_mode = true;   // Default flags, quiet on
         saveConfig();
