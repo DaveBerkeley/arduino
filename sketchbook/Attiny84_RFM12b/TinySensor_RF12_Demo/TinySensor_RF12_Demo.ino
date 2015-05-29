@@ -244,7 +244,7 @@ void setup() {
         config.group = eeprom_read_byte(RF12_EEPROM_ADDR + 1);
         config.lock = eeprom_read_byte(RF12_EEPROM_ADDR + 2);
     } else {
-        config.nodeId = 0x80 + 30; // node A1 @ 868 MHz
+        config.nodeId = 0x80 + 20; // node A1 @ 868 MHz
         config.group = 7;  //210
         config.lock=1;   //Unlocked
         rf12_initialize(config.nodeId&0x1F, config.nodeId >> 6 ,config.group);  
@@ -306,4 +306,6 @@ void loop() {
 
         activityLed(0);
     }
+    // TODO : remove me
+    //while(1) ;
 }
