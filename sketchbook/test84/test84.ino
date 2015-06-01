@@ -142,7 +142,7 @@ void setup() {
   Serial.begin(9600);  
   Serial.println(banner);
 
-  saveConfig(20, 212);
+  saveConfig(20, 6);
   uint8_t node = rf12_configSilent();
   rf12_configDump();
   state = START;
