@@ -1,6 +1,6 @@
 
-#define SDIO 3
-#define SCLK 2
+#define SDIO 5
+#define SCLK 4
 
 #define FRAMELENGTH 324
 

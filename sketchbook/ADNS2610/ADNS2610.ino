@@ -5,6 +5,10 @@
 
 #define LED 13
 
+static const int leds[] = {
+  2, 3, 11, 12, -1,
+};
+
 byte frame[FRAMELENGTH];
 
 void toggleLED()
@@ -20,6 +24,16 @@ void setup()
   pinMode(SCLK, OUTPUT);
   pinMode(SDIO, OUTPUT);
   pinMode(LED, OUTPUT);
+
+  // turn the illumination LEDS on  
+  for (int i = 0; ; i++) {
+    const int pin = leds[i];
+    if (pin == -1)
+      break;
+    pinMode(pin, OUTPUT);
+    delay(200);
+    digitalWrite(pin, LOW);
+  }
 
   Serial.begin(9600);
   delay(100);
