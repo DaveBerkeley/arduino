@@ -172,16 +172,18 @@ def frame(path, opts):
     def getpixel(x, y):
         return dial[size-x-1][size-y-1]
 
-    centre = mul(size, [ 9.5, 9.5 ] )
+    centre = mul(size, [ opts.x0, opts.y0 ] )
     white = 255, 255, 255
     grey = 128, 128, 128
     red = 0, 0, 255
     blue = 255, 0, 0
 
-    r1 = 5.0
-    cv2.circle(image, centre, int(r1*size), grey)
-    r2 = 8.0
-    cv2.circle(image, centre, int(r2*size), grey)
+    r1 = opts.r1
+    r2 = opts.r2
+
+    if 1:
+        cv2.circle(image, centre, int(r1*size), grey)
+        cv2.circle(image, centre, int(r2*size), grey)
 
     # Grid
     if 0:
@@ -314,6 +316,10 @@ if __name__ == "__main__":
     p.add_option("-v", "--video", dest="video", action="store_true")
     p.add_option("-c", "--c", dest="c", action="store_true")
     p.add_option("-f", "--frame", dest="frame")
+    p.add_option("-r", "--r1", dest="r1", type="float", default=5.0)
+    p.add_option("-R", "--r2", dest="r2", type="float", default=8.0)
+    p.add_option("-x", "--x0", dest="x0", type="float", default=9.5)
+    p.add_option("-y", "--y0", dest="y0", type="float", default=9.5)
     opts, args = p.parse_args()
 
     serial_dev = opts.dev
