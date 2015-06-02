@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python -u
 
 import time
 import optparse
@@ -113,7 +113,50 @@ def line(plot, p0, p1):
 #
 #
 
-def frame(path):
+def generate_c(lut):
+
+    print "// Auto generated. Do not edit"
+    print "//"
+
+    def print_seg(seg, pixels):
+        print
+        print "// segment %d" % seg
+        print "const static byte seg_%d[][] = {" % seg
+        for x, y in pixels:
+            print "\t{ %d, %d }," % (x, y)
+        print "\t{ 0xFF, 0xFF },"
+        print "};"
+
+    for seg, pixels in lut.items():
+        print_seg(seg, pixels)
+
+    print
+    print "// Segment arrays"
+    print
+    print "const static byte* segs[] = {";
+    for seg in lut.keys():
+        print "\tseg_%d," % seg
+    print "\t0,"
+    print "};"
+
+#
+#
+
+def asint(data):
+    p = []
+    for d in data:
+        p.append(int(d))
+    return tuple(p)
+
+def mul(m, data):
+    p = []
+    for d in data:
+        p.append(d * m)
+    return asint(p)
+
+assert asint([ 2.3, 4.5 ] ) == (2, 4)
+
+def frame(path, opts):
     cv2.namedWindow("mouse", 1)
 
     dial = cv2.imread(path)
@@ -122,7 +165,10 @@ def frame(path):
     scale = 20
     image = cv2.resize(dial, (size*scale, size*scale))
 
-    centre = int(9.5 * size), int(9.5 * size)
+    def getpixel(x, y):
+        return dial[size-x-1][size-y-1]
+
+    centre = mul(size, [ 9.5, 9.5 ] )
     white = 255, 255, 255
     grey = 128, 128, 128
     red = 0, 0, 255
@@ -134,10 +180,11 @@ def frame(path):
     cv2.circle(image, centre, int(r2*size), grey)
 
     # Grid
-    for x in range(size):
-        cv2.line(image, (x*scale, 0), (x*scale, size*scale), grey, 1)
-    for y in range(size):
-        cv2.line(image, (0, y*scale), (scale*size, y*scale), grey, 1)
+    if 0:
+        for x in range(size):
+            cv2.line(image, (x*scale, 0), (x*scale, size*scale), grey, 1)
+        for y in range(size):
+            cv2.line(image, (0, y*scale), (scale*size, y*scale), grey, 1)
 
     # Segments
     def xy(angle, r, as_int=True):
@@ -157,7 +204,7 @@ def frame(path):
         angle = s_to_angle(s)
         cv2.line(image, xy(angle, r1), xy(angle, r2), grey, 1)
 
-    def show_seg(image, s):
+    def make_seg(s):
         a1 = s_to_angle(-s)
         a2 = s_to_angle(-(s+1))
         poly = [
@@ -165,45 +212,82 @@ def frame(path):
             xy(a2, r2, 0), xy(a2, r1, 0), 
         ]
         poly.append(poly[0])
+        return poly
+
+    def show_seg(image, s):
+        poly = make_seg(s)
         for i in range(len(poly)-1):
             p1, p2 = poly[i], poly[i+1]
             p1 = int(p1[0]), int(p1[1])
             p2 = int(p2[0]), int(p2[1])
             cv2.line(image, p1, p2, red, 1)
 
-        return poly
-
     # show pixels
-    def show_pixels(im, pixels):
+    def show_pixels(im, pixels, outline=False):
         for x, y in pixels:
-            p = int((x+0.5) * scale), int((y+0.5) * scale)
-            cv2.circle(im, p, int(scale/2), blue)
+            pt = mul(scale, (x+0.5, y+0.5))
+            #print x, y
+            pixel = getpixel(x, y)
+            colour = tuple([ int(a) for a in pixel])
+            cv2.circle(im, pt, int(scale/2), colour, -1)
+            if outline:
+                cv2.circle(im, pt, int(scale/2), red, 1)
 
-    s = 0
+    def seg_to_pixels(s):
+        poly = make_seg(s)
+
+        class Plot:
+            def __init__(self):
+                self.data = {}
+            def plot(self, x, y):
+                self.data[mul(1.0/scale, [x, y])] = True
+            def get(self):
+                return self.data.keys()
+        p = Plot()
+        for i in range(len(poly)-1):
+            p1 = int(poly[i][0]), int(poly[i][1])
+            p2 = int(poly[i+1][0]), int(poly[i+1][1])
+            line(p.plot, p1, p2)
+
+        return p.get()
+
+    lut = {}
+    for s in range(segs):
+        lut[s] = seg_to_pixels(s)
+
+    def av_pixels(pixels):
+        s = 0
+        for x, y in pixels:
+            p = getpixel(x, y)
+            p = p[1] # green pixel
+            s += p
+        s /= float(len(pixels))
+        return int(s)
+
+    if opts.c:
+        # generate C code for the pixel blocks
+        generate_c(lut)
+        return
+
+    if 0:
+        for x in range(size):
+            for y in range(size):
+                pixels = [ (x, y) ]
+                show_pixels(image, pixels)
+
+    s = int(3*segs/4)
     paused = False
     while True:
         if not paused:
             im = image.copy()
-            poly = show_seg(im, s)
 
-            class Plot:
-                def __init__(self):
-                    self.data = {}
-                def plot(self, x, y):
-                    self.data[(int(x/scale), int(y/scale))] = True
-                def get(self):
-                    return self.data.keys()
-            p = Plot()
-            for i in range(len(poly)-1):
-                p1 = int(poly[i][0]), int(poly[i][1])
-                p2 = int(poly[i+1][0]), int(poly[i+1][1])
-                line(p.plot, p1, p2)
+            show_pixels(im, lut[s], True)
 
-            show_pixels(im, p.get())
+            print av_pixels(lut[s]),
 
             cv2.imshow("mouse", im)
 
-        key = cv2.waitKey(1500)
+        key = cv2.waitKey(500)
         if key == 27:
             break
         if key == ord('p'):
@@ -212,6 +296,7 @@ def frame(path):
         s += 1
         if s >= segs:
             s = 0
+            print
 
     cv2.destroyAllWindows()
 
@@ -223,6 +308,7 @@ if __name__ == "__main__":
     p.add_option("-d", "--dev", dest="dev", default="/dev/nano")
     p.add_option("-t", "--test", dest="test", action="store_true")
     p.add_option("-v", "--video", dest="video", action="store_true")
+    p.add_option("-c", "--c", dest="c", action="store_true")
     p.add_option("-f", "--frame", dest="frame")
     opts, args = p.parse_args()
 
@@ -231,6 +317,6 @@ if __name__ == "__main__":
     if opts.video:
         video(opts)
     elif opts.frame:
-        frame(opts.frame)
+        frame(opts.frame, opts)
     
 # FIN
