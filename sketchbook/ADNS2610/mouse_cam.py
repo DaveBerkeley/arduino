@@ -89,10 +89,13 @@ def frame(path):
     centre = int(9.5 * size), int(9.5 * size)
     white = 255, 255, 255
     grey = 128, 128, 128
-    r1 = 3
-    cv2.circle(image, centre, r1*size, grey)
-    r2 = 9
-    cv2.circle(image, centre, r2*size, grey)
+    red = 0, 0, 255
+    blue = 255, 0, 0
+
+    r1 = 4.0
+    cv2.circle(image, centre, int(r1*size), grey)
+    r2 = 8.5
+    cv2.circle(image, centre, int(r2*size), grey)
 
     # Grid
     for x in range(size):
@@ -105,18 +108,39 @@ def frame(path):
         x = int(math.sin(angle) * r * size)
         y = int(math.cos(angle) * r * size)
         return centre[0] + x, centre[1] + y
-    segs = 32
-    for s in range(segs):
+    def s_to_angle(s):
         angle = s * 2 * math.pi / segs
-        cv2.line(image, xy(angle, r1), xy(angle, r2), white, 1)
+        return angle
+
+    segs = 16
+
+    for s in range(segs):
+        angle = s_to_angle(s)
+        cv2.line(image, xy(angle, r1), xy(angle, r2), grey, 1)
 
     def show_seg(image, s):
-        red = 0, 0, 255
-        angle = -s * 2 * math.pi / segs
-        cv2.line(image, xy(angle, r1), xy(angle, r2), red, 1)
-        s += 1
-        angle = -s * 2 * math.pi / segs
-        cv2.line(image, xy(angle, r1), xy(angle, r2), red, 1)
+        a1 = s_to_angle(-s)
+        a2 = s_to_angle(-(s+1))
+        poly = [
+            xy(a1, r1), xy(a1, r2),
+            xy(a2, r2), xy(a2, r1), 
+        ]
+        poly.append(poly[0])
+        for i in range(len(poly)-1):
+            p1, p2 = poly[i], poly[i+1]
+            cv2.line(image, p1, p2, red, 1)
+
+    # show pixels
+    def show_pixels(pixels):
+        for x, y in pixels:
+            p = int((x+0.5) * scale), int((y+0.5) * scale)
+            cv2.circle(image, p, int(scale/2), blue)
+
+    pixels = []
+    for x in range(size):
+        for y in range(size):
+            pixels.append((x, y))
+    show_pixels(pixels)
 
     s = 0
     while True:
@@ -124,10 +148,9 @@ def frame(path):
         show_seg(im, s)
         cv2.imshow("mouse", im)
 
-        if getkey() == 27: # ESC
+        if cv2.waitKey(500) == 27:
             break
 
-        time.sleep(1)
         s += 1
         if s >= segs:
             s = 0
