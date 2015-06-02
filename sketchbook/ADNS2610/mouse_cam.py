@@ -77,14 +77,50 @@ def video(opts):
 #
 #
 
+#
+#   Bresenham's Line Drawing Algorithm
+#   see: http://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm
+
+def line(plot, p0, p1):
+    x0, y0 = p0
+    x1, y1 = p1
+    steep = abs(y1 - y0) > abs(x1 - x0)
+    if steep:
+        x0, y0 = y0, x0
+        x1, y1 = y1, x1
+    if x0 > x1:
+        x0, x1 = x1, x0
+        y0, y1 = y1, y0
+    delta_x = x1 - x0
+    delta_y = abs(y1 - y0)
+    error = delta_x // 2
+    y = y0
+    if y0 < y1:
+        y_step = 1
+    else:
+        y_step = -1
+
+    for x in range(x0, x1+1):
+        if steep:
+            plot(y, x)
+        else:
+            plot(x, y)
+        error -= delta_y
+        if error < 0:
+            y += y_step
+            error += delta_x
+
+#
+#
+
 def frame(path):
     cv2.namedWindow("mouse", 1)
 
-    image = cv2.imread(path)
+    dial = cv2.imread(path)
 
     size = 18
     scale = 20
-    image = cv2.resize(image, (size*scale, size*scale))
+    image = cv2.resize(dial, (size*scale, size*scale))
 
     centre = int(9.5 * size), int(9.5 * size)
     white = 255, 255, 255
@@ -92,9 +128,9 @@ def frame(path):
     red = 0, 0, 255
     blue = 255, 0, 0
 
-    r1 = 4.0
+    r1 = 5.0
     cv2.circle(image, centre, int(r1*size), grey)
-    r2 = 8.5
+    r2 = 8.0
     cv2.circle(image, centre, int(r2*size), grey)
 
     # Grid
@@ -104,15 +140,18 @@ def frame(path):
         cv2.line(image, (0, y*scale), (scale*size, y*scale), grey, 1)
 
     # Segments
-    def xy(angle, r):
-        x = int(math.sin(angle) * r * size)
-        y = int(math.cos(angle) * r * size)
-        return centre[0] + x, centre[1] + y
+    def xy(angle, r, as_int=True):
+        x = math.sin(angle) * r * size
+        y = math.cos(angle) * r * size
+        xx, yy = centre[0] + x, centre[1] + y
+        if as_int:
+            xx, yy = int(xx), int(yy)
+        return xx, yy
     def s_to_angle(s):
         angle = s * 2 * math.pi / segs
         return angle
 
-    segs = 16
+    segs = 64
 
     for s in range(segs):
         angle = s_to_angle(s)
@@ -122,34 +161,53 @@ def frame(path):
         a1 = s_to_angle(-s)
         a2 = s_to_angle(-(s+1))
         poly = [
-            xy(a1, r1), xy(a1, r2),
-            xy(a2, r2), xy(a2, r1), 
+            xy(a1, r1, 0), xy(a1, r2, 0),
+            xy(a2, r2, 0), xy(a2, r1, 0), 
         ]
         poly.append(poly[0])
         for i in range(len(poly)-1):
             p1, p2 = poly[i], poly[i+1]
+            p1 = int(p1[0]), int(p1[1])
+            p2 = int(p2[0]), int(p2[1])
             cv2.line(image, p1, p2, red, 1)
 
+        return poly
+
     # show pixels
-    def show_pixels(pixels):
+    def show_pixels(im, pixels):
         for x, y in pixels:
             p = int((x+0.5) * scale), int((y+0.5) * scale)
-            cv2.circle(image, p, int(scale/2), blue)
-
-    pixels = []
-    for x in range(size):
-        for y in range(size):
-            pixels.append((x, y))
-    show_pixels(pixels)
+            cv2.circle(im, p, int(scale/2), blue)
 
     s = 0
+    paused = False
     while True:
-        im = image.copy()
-        show_seg(im, s)
-        cv2.imshow("mouse", im)
+        if not paused:
+            im = image.copy()
+            poly = show_seg(im, s)
 
-        if cv2.waitKey(500) == 27:
+            class Plot:
+                def __init__(self):
+                    self.data = {}
+                def plot(self, x, y):
+                    self.data[(int(x/scale), int(y/scale))] = True
+                def get(self):
+                    return self.data.keys()
+            p = Plot()
+            for i in range(len(poly)-1):
+                p1 = int(poly[i][0]), int(poly[i][1])
+                p2 = int(poly[i+1][0]), int(poly[i+1][1])
+                line(p.plot, p1, p2)
+
+            show_pixels(im, p.get())
+
+            cv2.imshow("mouse", im)
+
+        key = cv2.waitKey(1500)
+        if key == 27:
             break
+        if key == ord('p'):
+            paused = not paused
 
         s += 1
         if s >= segs:
