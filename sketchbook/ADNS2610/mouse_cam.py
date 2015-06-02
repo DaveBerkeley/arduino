@@ -118,10 +118,14 @@ def generate_c(lut):
     print "// Auto generated. Do not edit"
     print "//"
 
+    print
+    print "typedef struct { int x, y; } point;"
+    print
+
     def print_seg(seg, pixels):
         print
         print "// segment %d" % seg
-        print "const static byte seg_%d[][] = {" % seg
+        print "const static point seg_%d[] = {" % seg
         for x, y in pixels:
             print "\t{ %d, %d }," % (x, y)
         print "\t{ 0xFF, 0xFF },"
@@ -133,7 +137,7 @@ def generate_c(lut):
     print
     print "// Segment arrays"
     print
-    print "const static byte* segs[] = {";
+    print "const static point* segs[] = {";
     for seg in lut.keys():
         print "\tseg_%d," % seg
     print "\t0,"
