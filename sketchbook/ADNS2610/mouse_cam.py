@@ -67,9 +67,9 @@ def video(opts):
             if pixel >= (size * size):
                 continue
             if opts.test:
-                c = chr(pixel%256)
+                c = chr(pixel%0x3F)
             # remap to match mouse mapping
-            fb[(size-1)-(pixel%size)][pixel/size] = ord(c)
+            fb[(size-1)-(pixel%size)][pixel/size] = ord(c) * 4
             pixel += 1
 
     cv2.destroyAllWindows()
