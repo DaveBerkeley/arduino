@@ -42,7 +42,7 @@ def video(opts):
     cv2.namedWindow("mouse", 1)
 
     size = 18
-    scale = 20
+    scale = 40
     # frame buffer 18x18
     fb = numpy.zeros((size, size), numpy.uint8)
 
