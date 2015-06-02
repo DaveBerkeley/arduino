@@ -167,7 +167,9 @@ def frame(path, opts):
 
     size = 18
     scale = 20
-    image = cv2.resize(dial, (size*scale, size*scale))
+    image = numpy.zeros((size,size), dtype=numpy.uint8)
+    image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+    image = cv2.resize(image, (size*scale, size*scale))
 
     def getpixel(x, y):
         return dial[size-x-1][size-y-1]
@@ -180,17 +182,6 @@ def frame(path, opts):
 
     r1 = opts.r1
     r2 = opts.r2
-
-    if 1:
-        cv2.circle(image, centre, int(r1*size), grey)
-        cv2.circle(image, centre, int(r2*size), grey)
-
-    # Grid
-    if 0:
-        for x in range(size):
-            cv2.line(image, (x*scale, 0), (x*scale, size*scale), grey, 1)
-        for y in range(size):
-            cv2.line(image, (0, y*scale), (scale*size, y*scale), grey, 1)
 
     # Segments
     def xy(angle, r, as_int=True):
@@ -205,10 +196,6 @@ def frame(path, opts):
         return angle
 
     segs = 64
-
-    for s in range(segs):
-        angle = s_to_angle(s)
-        cv2.line(image, xy(angle, r1), xy(angle, r2), grey, 1)
 
     def make_seg(s):
         a1 = s_to_angle(-s)
@@ -275,13 +262,28 @@ def frame(path, opts):
         generate_c(lut)
         return
 
-    if 0:
+    if 1:
         for x in range(size):
             for y in range(size):
                 pixels = [ (x, y) ]
                 show_pixels(image, pixels)
 
-    s = int(3*segs/4)
+    if 1:
+        cv2.circle(image, centre, int(r1*size), white)
+        cv2.circle(image, centre, int(r2*size), white)
+
+    # Grid
+    if 0:
+        for x in range(size):
+            cv2.line(image, (x*scale, 0), (x*scale, size*scale), grey, 1)
+        for y in range(size):
+            cv2.line(image, (0, y*scale), (scale*size, y*scale), grey, 1)
+
+    for s in range(segs):
+        angle = s_to_angle(s)
+        cv2.line(image, xy(angle, r1), xy(angle, r2), white, 1)
+
+    s = 0
     paused = False
     while True:
         if not paused:
