@@ -195,7 +195,7 @@ def frame(path, opts):
         angle = s * 2 * math.pi / segs
         return angle
 
-    segs = 64
+    segs = opts.segments
 
     def make_seg(s):
         a1 = s_to_angle(-s)
@@ -322,6 +322,7 @@ if __name__ == "__main__":
     p.add_option("-R", "--r2", dest="r2", type="float", default=8.0)
     p.add_option("-x", "--x0", dest="x0", type="float", default=9.5)
     p.add_option("-y", "--y0", dest="y0", type="float", default=9.5)
+    p.add_option("-s", "--segments", dest="segments", type="int", default=64)
     opts, args = p.parse_args()
 
     serial_dev = opts.dev
