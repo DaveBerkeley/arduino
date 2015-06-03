@@ -44,7 +44,8 @@ def video(opts):
     size = 18
     scale = 40
     # frame buffer 18x18
-    fb = numpy.zeros((size, size), numpy.uint8)
+    fb = numpy.zeros((size, size), numpy.float)
+    prev = numpy.zeros((size, size), numpy.float)
 
     frame = 0
     pixel = 0
@@ -56,6 +57,18 @@ def video(opts):
         if ord(c[0]) & 0x80: # end of frame
             print "frame", frame, pixel, size * size
             frame += 1
+
+            if 1:
+                filt = 0.9
+                b = (filt * prev) + ((1 - filt) * fb)
+                #prev = fb
+                fb = b
+                prev = b
+
+            if opts.autogain:
+                m = numpy.max(fb)
+                fb = fb * int(255.0 / m)
+
             image = scipy.misc.imresize(fb, (size * scale, size * scale))
             cv2.imshow("mouse", image)
             pixel = 0
@@ -323,6 +336,7 @@ if __name__ == "__main__":
     p.add_option("-x", "--x0", dest="x0", type="float", default=9.5)
     p.add_option("-y", "--y0", dest="y0", type="float", default=9.5)
     p.add_option("-s", "--segments", dest="segments", type="int", default=64)
+    p.add_option("-a", "--autogain", dest="autogain", action="store_true")
     opts, args = p.parse_args()
 
     serial_dev = opts.dev
