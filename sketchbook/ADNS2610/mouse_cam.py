@@ -19,6 +19,14 @@ def log(*args):
         print arg,
     print
 
+size = 18
+scale = 20
+
+white = 255, 255, 255
+grey = 128, 128, 128
+red = 0, 0, 255
+blue = 255, 0, 0
+
 #
 #
 
@@ -41,8 +49,6 @@ def video(opts):
 
     cv2.namedWindow("mouse", 1)
 
-    size = 18
-    scale = 40
     # frame buffer 18x18
     fb = numpy.zeros((size, size), numpy.float)
     prev = numpy.zeros((size, size), numpy.float)
@@ -58,7 +64,7 @@ def video(opts):
             print "frame", frame, pixel, size * size
             frame += 1
 
-            if 1:
+            if opts.filter:
                 filt = 0.9
                 b = (filt * prev) + ((1 - filt) * fb)
                 #prev = fb
@@ -173,13 +179,58 @@ def mul(m, data):
 
 assert asint([ 2.3, 4.5 ] ) == (2, 4)
 
+#
+#
+
+def s_to_angle(s, segs):
+    angle = s * 2 * math.pi / segs
+    return angle
+
+def xy(angle, r, centre, as_int=True):
+    x = math.sin(angle) * r * size
+    y = math.cos(angle) * r * size
+    xx, yy = centre[0] + x, centre[1] + y
+    if as_int:
+        xx, yy = int(xx), int(yy)
+    return xx, yy
+
+def make_seg(s, segs, r1, r2, centre):
+    a1 = s_to_angle(-s, segs)
+    a2 = s_to_angle(-(s+1), segs)
+    poly = [
+        xy(a1, r1, centre, 0), xy(a1, r2, centre, 0),
+        xy(a2, r2, centre, 0), xy(a2, r1, centre, 0),
+    ]
+    poly.append(poly[0])
+    return poly
+
+def show_seg(image, s):
+    poly = make_seg(s)
+    for i in range(len(poly)-1):
+        p1, p2 = poly[i], poly[i+1]
+        p1 = int(p1[0]), int(p1[1])
+        p2 = int(p2[0]), int(p2[1])
+        cv2.line(image, p1, p2, red, 1)
+
+# show pixels
+def show_pixels(im, pixels, getpixel, outline=False):
+    for x, y in pixels:
+        pt = mul(scale, (x+0.5, y+0.5))
+        #print x, y
+        pixel = getpixel(x, y)
+        colour = tuple([ int(a) for a in pixel])
+        cv2.circle(im, pt, int(scale/2), colour, -1)
+        if outline:
+            cv2.circle(im, pt, int(scale/2), red, 1)
+
+#
+#
+
 def frame(path, opts):
     cv2.namedWindow("mouse", 1)
 
     dial = cv2.imread(path)
 
-    size = 18
-    scale = 20
     image = numpy.zeros((size,size), dtype=numpy.uint8)
     image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
     image = cv2.resize(image, (size*scale, size*scale))
@@ -188,59 +239,14 @@ def frame(path, opts):
         return dial[size-x-1][size-y-1]
 
     centre = mul(size, [ opts.x0, opts.y0 ] )
-    white = 255, 255, 255
-    grey = 128, 128, 128
-    red = 0, 0, 255
-    blue = 255, 0, 0
-
     r1 = opts.r1
     r2 = opts.r2
 
     # Segments
-    def xy(angle, r, as_int=True):
-        x = math.sin(angle) * r * size
-        y = math.cos(angle) * r * size
-        xx, yy = centre[0] + x, centre[1] + y
-        if as_int:
-            xx, yy = int(xx), int(yy)
-        return xx, yy
-    def s_to_angle(s):
-        angle = s * 2 * math.pi / segs
-        return angle
-
     segs = opts.segments
 
-    def make_seg(s):
-        a1 = s_to_angle(-s)
-        a2 = s_to_angle(-(s+1))
-        poly = [
-            xy(a1, r1, 0), xy(a1, r2, 0),
-            xy(a2, r2, 0), xy(a2, r1, 0), 
-        ]
-        poly.append(poly[0])
-        return poly
-
-    def show_seg(image, s):
-        poly = make_seg(s)
-        for i in range(len(poly)-1):
-            p1, p2 = poly[i], poly[i+1]
-            p1 = int(p1[0]), int(p1[1])
-            p2 = int(p2[0]), int(p2[1])
-            cv2.line(image, p1, p2, red, 1)
-
-    # show pixels
-    def show_pixels(im, pixels, outline=False):
-        for x, y in pixels:
-            pt = mul(scale, (x+0.5, y+0.5))
-            #print x, y
-            pixel = getpixel(x, y)
-            colour = tuple([ int(a) for a in pixel])
-            cv2.circle(im, pt, int(scale/2), colour, -1)
-            if outline:
-                cv2.circle(im, pt, int(scale/2), red, 1)
-
     def seg_to_pixels(s):
-        poly = make_seg(s)
+        poly = make_seg(s, segs, r1, r2, centre)
 
         class Plot:
             def __init__(self):
@@ -279,7 +285,7 @@ def frame(path, opts):
         for x in range(size):
             for y in range(size):
                 pixels = [ (x, y) ]
-                show_pixels(image, pixels)
+                show_pixels(image, pixels, getpixel)
 
     if 1:
         cv2.circle(image, centre, int(r1*size), white)
@@ -293,8 +299,8 @@ def frame(path, opts):
             cv2.line(image, (0, y*scale), (scale*size, y*scale), grey, 1)
 
     for s in range(segs):
-        angle = s_to_angle(s)
-        cv2.line(image, xy(angle, r1), xy(angle, r2), white, 1)
+        angle = s_to_angle(s, segs)
+        cv2.line(image, xy(angle, r1, centre), xy(angle, r2, centre), white, 1)
 
     s = 0
     paused = False
@@ -302,7 +308,7 @@ def frame(path, opts):
         if not paused:
             im = image.copy()
 
-            show_pixels(im, lut[s], True)
+            show_pixels(im, lut[s], getpixel, True)
 
             print av_pixels(lut[s]),
 
@@ -337,6 +343,7 @@ if __name__ == "__main__":
     p.add_option("-y", "--y0", dest="y0", type="float", default=9.5)
     p.add_option("-s", "--segments", dest="segments", type="int", default=64)
     p.add_option("-a", "--autogain", dest="autogain", action="store_true")
+    p.add_option("-F", "--filter", dest="filter", action="store_true")
     opts, args = p.parse_args()
 
     serial_dev = opts.dev
