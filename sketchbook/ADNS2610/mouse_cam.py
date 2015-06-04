@@ -47,7 +47,7 @@ def getkey():
 def video(opts):
     s = init_serial()
 
-    cv2.namedWindow("mouse", 1)
+    cv2.namedWindow("video", 1)
 
     detect = Detect(opts)
 
@@ -98,10 +98,10 @@ def video(opts):
                         print "*",
                         hit = seg
                     print a,
-                print ":", hit
+                print ":", int(360 * (hit / float(opts.segments))), "deg"
                 show_pixels(im, lut[hit], getpixel, red)
 
-            cv2.imshow("mouse", im)
+            cv2.imshow("video", im)
             pixel = 0
 
             if getkey() == 27: # ESC
