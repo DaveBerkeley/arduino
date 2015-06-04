@@ -51,11 +51,10 @@ def video(opts):
 
     detect = Detect(opts)
 
-    # frame buffer 18x18
+    # frame buffer 
     fb = numpy.zeros((size, size), numpy.float)
-    prev = numpy.zeros((size, size), numpy.float)
-    blank = numpy.zeros((size, size), numpy.float)
-    image = scipy.misc.imresize(blank, (size * scale, size * scale))
+    prev = fb.copy()
+    image = make_blank_image()
 
     lut = detect.make_lut()
 
@@ -86,19 +85,21 @@ def video(opts):
                 return p, p, p
             im = image.copy()
             show_all_pixels(im, getpixel)
-            detect.draw_segs(im)
 
-            score = []
-            for seg in range(detect.segs):
-                score.append(av_pixels(lut[seg], getpixel))
+            if opts.detect:
+                detect.draw_segs(im)
+                score = []
+                for seg in range(detect.segs):
+                    score.append(av_pixels(lut[seg], getpixel))
 
-            m = min(score)
-            for seg, a in enumerate(score):
-                if a == m:
-                    print "*",
-                    hit = seg
-                print a,
-            print ":", hit
+                m = min(score)
+                for seg, a in enumerate(score):
+                    if a == m:
+                        print "*",
+                        hit = seg
+                    print a,
+                print ":", hit
+                show_pixels(im, lut[hit], getpixel, red)
 
             cv2.imshow("mouse", im)
             pixel = 0
@@ -241,7 +242,7 @@ class Detect:
             xy0 = complex(*self.xy(a1, self.r2, 0))
             xy1 = complex(*self.xy(a2, self.r2, 0))
             d = abs(xy0 - xy1)
-            if d <= (2 * size):
+            if d <= (1.5 * size):
                 return
             mid = (a1 + a2) / 2.0
             poly.append(self.xy(mid, self.r1, 0))
@@ -291,7 +292,7 @@ class Detect:
 #
 
 # show pixels
-def show_pixels(im, pixels, getpixel, outline=False):
+def show_pixels(im, pixels, getpixel, outline=None):
     for x, y in pixels:
         pt = mul(scale, (x+0.5, y+0.5))
         #print x, y
@@ -299,7 +300,7 @@ def show_pixels(im, pixels, getpixel, outline=False):
         colour = tuple([ int(a) for a in pixel])
         cv2.circle(im, pt, int(scale/2), colour, -1)
         if outline:
-            cv2.circle(im, pt, int(scale/2), red, 1)
+            cv2.circle(im, pt, int(scale/2), outline, 1)
 
 def show_all_pixels(image, getpixel):
     for x in range(size):
@@ -360,7 +361,7 @@ def frame(path, opts):
         if not paused:
             im = image.copy()
 
-            show_pixels(im, lut[s], getpixel, True)
+            show_pixels(im, lut[s], getpixel, red)
 
             print av_pixels(lut[s], getpixel),
 
@@ -390,12 +391,13 @@ if __name__ == "__main__":
     p.add_option("-c", "--c", dest="c", action="store_true")
     p.add_option("-f", "--frame", dest="frame")
     p.add_option("-r", "--r1", dest="r1", type="float", default=5.0)
-    p.add_option("-R", "--r2", dest="r2", type="float", default=8.0)
+    p.add_option("-R", "--r2", dest="r2", type="float", default=9.0)
     p.add_option("-x", "--x0", dest="x0", type="float", default=9.5)
     p.add_option("-y", "--y0", dest="y0", type="float", default=9.5)
     p.add_option("-s", "--segments", dest="segments", type="int", default=64)
     p.add_option("-a", "--autogain", dest="autogain", action="store_true")
     p.add_option("-F", "--filter", dest="filter", action="store_true")
+    p.add_option("-D", "--detect", dest="detect", action="store_true")
     opts, args = p.parse_args()
 
     serial_dev = opts.dev
