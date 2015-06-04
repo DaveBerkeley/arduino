@@ -49,9 +49,15 @@ def video(opts):
 
     cv2.namedWindow("mouse", 1)
 
+    detect = Detect(opts)
+
     # frame buffer 18x18
     fb = numpy.zeros((size, size), numpy.float)
     prev = numpy.zeros((size, size), numpy.float)
+    blank = numpy.zeros((size, size), numpy.float)
+    image = scipy.misc.imresize(blank, (size * scale, size * scale))
+
+    lut = detect.make_lut()
 
     frame = 0
     pixel = 0
@@ -75,8 +81,26 @@ def video(opts):
                 m = numpy.max(fb)
                 fb = fb * int(255.0 / m)
 
-            image = scipy.misc.imresize(fb, (size * scale, size * scale))
-            cv2.imshow("mouse", image)
+            def getpixel(x, y):
+                p = int(fb[y][x])
+                return p, p, p
+            im = image.copy()
+            show_all_pixels(im, getpixel)
+            detect.draw_segs(im)
+
+            score = []
+            for seg in range(detect.segs):
+                score.append(av_pixels(lut[seg], getpixel))
+
+            m = min(score)
+            for seg, a in enumerate(score):
+                if a == m:
+                    print "*",
+                    hit = seg
+                print a,
+            print ":", hit
+
+            cv2.imshow("mouse", im)
             pixel = 0
 
             if getkey() == 27: # ESC
@@ -210,6 +234,24 @@ class Detect:
             self.xy(a2, self.r2, 0), self.xy(a2, self.r1, 0),
         ]
         poly.append(poly[0])
+
+        # if more than 1-pixel gap between a1,r2 and a2,r2
+        # subdivide
+        def subdivide(a1, a2):
+            xy0 = complex(*self.xy(a1, self.r2, 0))
+            xy1 = complex(*self.xy(a2, self.r2, 0))
+            d = abs(xy0 - xy1)
+            if d <= (2 * size):
+                return
+            mid = (a1 + a2) / 2.0
+            poly.append(self.xy(mid, self.r1, 0))
+            poly.append(self.xy(mid, self.r2, 0))
+
+            subdivide(a1, mid)
+            subdivide(mid, a2)
+
+        subdivide(a1, a2)
+
         return poly
 
     def seg_to_pixels(self, s):
@@ -360,7 +402,7 @@ if __name__ == "__main__":
 
     if opts.video:
         video(opts)
-    elif opts.frame:
+    else:
         frame(opts.frame, opts)
     
 # FIN
