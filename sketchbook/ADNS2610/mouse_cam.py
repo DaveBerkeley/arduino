@@ -39,6 +39,20 @@ def init_serial():
     return s
 
 #
+#   Convert between mouse x,y mapping and index into array
+
+def xy2i(x, y):
+    idx = y * size
+    idx += (size-1) - x
+    return idx
+
+def i2xy(idx):
+    x, y = (size-1)-(idx%size), idx/size
+    return x, y
+
+assert xy2i(3, 7) == 140
+
+#
 #
 
 def getkey():
@@ -78,7 +92,8 @@ def video(opts):
 
             if opts.autogain:
                 m = numpy.max(fb)
-                fb = fb * int(255.0 / m)
+                if m:
+                    fb = fb * int(255.0 / m)
 
             def getpixel(x, y):
                 p = int(fb[y][x])
@@ -112,8 +127,8 @@ def video(opts):
                 continue
             if opts.test:
                 c = chr(pixel%0x3F)
-            # remap to match mouse mapping
-            fb[(size-1)-(pixel%size)][pixel/size] = ord(c) * 4
+            x, y = i2xy(pixel)
+            fb[x][y] = ord(c) * 4
             pixel += 1
 
     cv2.destroyAllWindows()
@@ -162,17 +177,14 @@ def generate_c(lut):
     print "// Auto generated. Do not edit"
     print "//"
 
-    print
-    print "typedef struct { int x, y; } point;"
-    print
-
     def print_seg(seg, pixels):
         print
         print "// segment %d" % seg
-        print "const static point seg_%d[] = {" % seg
+        print "const static int seg_%d[] = {" % seg
+        print "   ",
         for x, y in pixels:
-            print "\t{ %d, %d }," % (x, y)
-        print "\t{ 0xFF, 0xFF },"
+            print "%d," % xy2i(x, y),
+        print "-1,"
         print "};"
 
     for seg, pixels in lut.items():
@@ -181,7 +193,7 @@ def generate_c(lut):
     print
     print "// Segment arrays"
     print
-    print "const static point* segs[] = {";
+    print "const static int* segs[] = {";
     for seg in lut.keys():
         print "\tseg_%d," % seg
     print "\t0,"
