@@ -383,6 +383,9 @@ def frame(path, opts):
             print av_pixels(lut[s], getpixel),
 
             cv2.imshow("detect", im)
+            if opts.save:
+                path = "image_%06d.png" % s
+                cv2.imwrite(path, im)
 
         key = cv2.waitKey(500)
         if key == 27:
@@ -394,6 +397,8 @@ def frame(path, opts):
         if s >= segs:
             s = 0
             print
+            if opts.save:
+                break
 
     cv2.destroyAllWindows()
 
@@ -415,6 +420,7 @@ if __name__ == "__main__":
     p.add_option("-a", "--autogain", dest="autogain", action="store_true")
     p.add_option("-F", "--filter", dest="filter", action="store_true")
     p.add_option("-D", "--detect", dest="detect", action="store_true")
+    p.add_option("-S", "--save", dest="save", action="store_true")
     opts, args = p.parse_args()
 
     serial_dev = opts.dev
