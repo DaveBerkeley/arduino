@@ -60,6 +60,7 @@ def getkey():
 
 def video(opts):
     s = init_serial()
+    s.write('v')
 
     cv2.namedWindow("video", 1)
 
@@ -78,6 +79,7 @@ def video(opts):
         c = s.read(1)
         if not c:
             time.sleep(0.1)
+            s.write('v')
             continue
         if ord(c[0]) & 0x80: # end of frame
             print "frame", frame, pixel, size * size

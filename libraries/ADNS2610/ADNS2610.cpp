@@ -22,75 +22,89 @@ const byte regPixelData = 0x08;
 const byte maskNoSleep  = 0x01;
 const byte maskPID      = 0xE0;
 
-void mouseInit(void)
+    /*
+     *
+     */
+
+MouseCam::MouseCam(uint8_t sdio, uint8_t sck)
+:   m_sdio(sdio), 
+    m_sck(sck)
 {
-  digitalWrite(SCLK, HIGH);
+}
+
+    /*
+     *
+     */
+
+bool MouseCam::init()
+{
+  pinMode(m_sck, OUTPUT);
+  //pinMode(SDIO, OUTPUT);
+  digitalWrite(m_sck, HIGH);
   delayMicroseconds(5);
-  digitalWrite(SCLK, LOW);
+  digitalWrite(m_sck, LOW);
   delayMicroseconds(1);
-  digitalWrite(SCLK, HIGH);
+  digitalWrite(m_sck, HIGH);
   delay(1025);
   writeRegister(regConfig, maskNoSleep); //Force the mouse to be always on.
+  return true;
 }
 
-void dumpDiag(void)
-{
-  unsigned int val;
+    /*
+     *
+     */
 
-  val = readRegister(regStatus);
-
-  Serial.print("Product ID: ");
-  Serial.print( (unsigned int)((val & maskPID) >> 5));
-  Serial.print("\nOkay\n");
-}
-
-void writeRegister(byte addr, byte data)
+void MouseCam::writeRegister(byte addr, byte data)
 {
   byte i;
 
   addr |= 0x80; //Setting MSB high indicates a write operation.
 
   //Write the address
-  pinMode (SDIO, OUTPUT);
+  pinMode (m_sdio, OUTPUT);
   for (i = 8; i != 0; i--)
   {
-    digitalWrite (SCLK, LOW);
-    digitalWrite (SDIO, addr & (1 << (i-1) ));
-    digitalWrite (SCLK, HIGH);
+    digitalWrite (m_sck, LOW);
+    digitalWrite (m_sdio, addr & (1 << (i-1) ));
+    digitalWrite (m_sck, HIGH);
   }
 
   //Write the data    
   for (i = 8; i != 0; i--)
   {
-    digitalWrite (SCLK, LOW);
-    digitalWrite (SDIO, data & (1 << (i-1) ));
-    digitalWrite (SCLK, HIGH);
+    digitalWrite (m_sck, LOW);
+    digitalWrite (m_sdio, data & (1 << (i-1) ));
+    digitalWrite (m_sck, HIGH);
   }
 }
 
-byte readRegister(byte addr)
+    /*
+     *
+     */
+
+byte MouseCam::readRegister(byte addr)
 {
   byte i;
   byte r = 0;
 
   //Write the address
-  pinMode (SDIO, OUTPUT);
+  pinMode (m_sdio, OUTPUT);
   for (i = 8; i != 0; i--)
   {
-    digitalWrite (SCLK, LOW);
-    digitalWrite (SDIO, addr & (1 << (i-1) ));
-    digitalWrite (SCLK, HIGH);
+    digitalWrite (m_sck, LOW);
+    digitalWrite (m_sdio, addr & (1 << (i-1) ));
+    digitalWrite (m_sck, HIGH);
   }
 
-  pinMode (SDIO, INPUT);  //Switch the dataline from output to input
+  pinMode (m_sdio, INPUT);  //Switch the dataline from output to input
   delayMicroseconds(110);  //Wait (per the datasheet, the chip needs a minimum of 100 µsec to prepare the data)
 
   //Clock the data back in
   for (i = 8; i != 0; i--)
   {                             
-    digitalWrite (SCLK, LOW);
-    digitalWrite (SCLK, HIGH);
-    r |= (digitalRead (SDIO) << (i-1) );
+    digitalWrite (m_sck, LOW);
+    digitalWrite (m_sck, HIGH);
+    r |= (digitalRead (m_sdio) << (i-1) );
   }
 
   delayMicroseconds(110);  //Tailing delay guarantees >100 µsec before next transaction
@@ -98,9 +112,8 @@ byte readRegister(byte addr)
   return r;
 }
 
-
 //ADNS2610 dumps a 324-byte array, so this function assumes arr points to a buffer of at least 324 bytes.
-void readFrame(byte *arr)
+void MouseCam::readFrame(byte *arr, void (*idle)(void*), void* arg)
 {
   byte *pos;
   byte *uBound;
@@ -126,7 +139,11 @@ void readFrame(byte *arr)
 
     //Only bother with the next bit if the pixel data is valid.
     if( !(val & 64) )
+    {
+      if (idle)
+          idle(arg);
       continue;
+    }
 
     //If we encounter a start-of-field indicator, and the cursor isn't at the first pixel,
     //then stop. ('Cause the last pixel was the end of the frame.)
@@ -137,6 +154,14 @@ void readFrame(byte *arr)
     *pos = val & 63;
     pos++;
   }
+}
+
+uint8_t MouseCam::getId(void)
+{
+  unsigned int val;
+
+  val = readRegister(regStatus);
+  return (val & maskPID) >> 5;
 }
 
 //  FIN

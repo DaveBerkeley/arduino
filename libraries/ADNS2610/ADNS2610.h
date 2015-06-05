@@ -1,12 +1,16 @@
 
-#define SDIO 5
-#define SCLK 4
+#define FRAMELENGTH (18*18)
 
-#define FRAMELENGTH 324
-
-void mouseInit();
-void dumpDiag();
-void readFrame(byte *arr);
-void writeRegister(byte addr, byte data);
-byte readRegister(byte addr);
+class MouseCam 
+{
+public:
+    uint8_t m_sdio, m_sck;
+public:
+    MouseCam(uint8_t sdio, uint8_t sck);
+    bool init();
+    uint8_t getId();
+    void writeRegister(byte addr, byte data);
+    byte readRegister(byte addr);
+    void readFrame(byte *arr, void (*idle)(void*), void* arg);
+};
 
