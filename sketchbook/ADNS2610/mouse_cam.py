@@ -343,6 +343,20 @@ def av_pixels(pixels, getpixel):
     s /= float(len(pixels))
     return int(s)
 
+def draw_graph(image, segs, avs):
+    s = size * scale / 10
+    y0, y1 = int(s * 4) , int(s * 6)
+    w = size * scale
+    for s in range(segs):
+        if s >= len(avs):
+            break
+        x = int((s/float(segs)) * w)
+        y = y0 + ((255-avs[s]) * (y1 - y0) / 256)
+        print s, x
+        cv2.circle(image, (x, y), int(w/segs), blue, -1)
+    cv2.line(image, (0, y0), (size*scale, y0), blue, 1)
+    cv2.line(image, (0, y1), (size*scale, y1), blue, 1)
+
 #
 #
 
@@ -374,18 +388,22 @@ def frame(path, opts):
 
     s = 0
     paused = False
+    avs = []
     while True:
         if not paused:
             im = image.copy()
 
             show_pixels(im, lut[s], getpixel, red)
 
-            print av_pixels(lut[s], getpixel),
+            av = av_pixels(lut[s], getpixel)
+            avs.append(av)
+			print av,
 
-            cv2.imshow("detect", im)
             if opts.save:
                 path = "image_%06d.png" % s
+                draw_graph(im, segs, avs)
                 cv2.imwrite(path, im)
+            cv2.imshow("detect", im)
 
         key = cv2.waitKey(500)
         if key == 27:
