@@ -276,7 +276,10 @@ class Detect:
             def __init__(self):
                 self.data = {}
             def plot(self, x, y):
-                self.data[mul(1.0/scale, [x, y])] = True
+                x, y = mul(1.0/scale, [x, y])
+                if 0 <= x < size:
+                    if 0 <= y < size:
+                        self.data[(x, y)] = True
             def get(self):
                 return self.data.keys()
         p = Plot()
@@ -405,7 +408,7 @@ if __name__ == "__main__":
     p.add_option("-c", "--c", dest="c", action="store_true")
     p.add_option("-f", "--frame", dest="frame")
     p.add_option("-r", "--r1", dest="r1", type="float", default=5.0)
-    p.add_option("-R", "--r2", dest="r2", type="float", default=9.0)
+    p.add_option("-R", "--r2", dest="r2", type="float", default=12.0)
     p.add_option("-x", "--x0", dest="x0", type="float", default=9.5)
     p.add_option("-y", "--y0", dest="y0", type="float", default=9.5)
     p.add_option("-s", "--segments", dest="segments", type="int", default=64)
