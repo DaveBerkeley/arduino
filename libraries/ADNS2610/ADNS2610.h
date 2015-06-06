@@ -1,16 +1,24 @@
 
-#define FRAMELENGTH (18*18)
+    /*
+     *  Class to control ADNS2610 Optical Mouse chip.
+     */
 
 class MouseCam 
 {
-public:
+private:
     uint8_t m_sdio, m_sck;
-public:
-    MouseCam(uint8_t sdio, uint8_t sck);
-    bool init();
-    uint8_t getId();
+
     void writeRegister(byte addr, byte data);
     byte readRegister(byte addr);
-    void readFrame(byte *arr, void (*idle)(void*), void* arg);
+
+public:
+    const static int FRAMELENGTH = 18 * 18;
+
+    MouseCam(uint8_t sdio, uint8_t sck);
+
+    bool init();
+    uint8_t getId();
+    bool readFrame(byte *frame, void (*idle)(void*)=0, void* arg=0);
 };
 
+//  FIN

@@ -39,7 +39,7 @@ void error()
 
 static int find_seg(const byte* frame)
 {
-    float lowest = 256 * 18 * 18;
+    float lowest = 256 * MouseCam::FRAMELENGTH;
     int lowest_seg = -1;
 
     for (int seg = 0; ; seg++) {
@@ -65,11 +65,6 @@ static int find_seg(const byte* frame)
   /*
   *
   */
-
-static void idle(void* v)
-{
-  digitalWrite(LED, LOW);
-}
 
 void setup()
 {
@@ -102,7 +97,7 @@ void setup()
 void loop()
 {
   static bool video = false;
-  byte frame[FRAMELENGTH];
+  static bool bad_frame = false;
   
   if (Serial.available()) {
     int c = Serial.read();
@@ -113,11 +108,17 @@ void loop()
     }
   }
 
-  digitalWrite(LED, HIGH);
-  mouse.readFrame(frame, idle, 0);
+  digitalWrite(LED, bad_frame ? HIGH : LOW);
+  if (bad_frame)
+    bad_frame = false;
+  byte frame[MouseCam::FRAMELENGTH];
+  if (!mouse.readFrame(frame)) {
+    bad_frame = true;
+    return; // error reading frame
+  }
 
   if (video) {
-    for(int i = 0; i < FRAMELENGTH; i++)
+    for (int i = 0; i < mouse.FRAMELENGTH; i++)
     {
       Serial.print((char) (frame[i] & 0x3F));
     }

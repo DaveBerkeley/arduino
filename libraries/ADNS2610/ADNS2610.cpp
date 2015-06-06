@@ -1,15 +1,13 @@
 /*  
  Serial driver for ADNS2010, by Conor Peterson (robotrobot@gmail.com)
  Serial I/O routines adapted from Martjin The and Beno?t Rosseau's work.
+ Converted to C++ class by Dave Berkeley projects2@rotwang.co.uk
  Delay timings verified against ADNS2061 datasheet.
  
  The serial I/O routines are apparently the same across several Avago chips.
- It would be a good idea to reimplement this code in C++. The primary difference
- between, say, the ADNS2610 and the ADNS2051 are the schemes they use to dump the data
+ The primary difference between, say, the ADNS2610 and the ADNS2051 
+ are the schemes they use to dump the data
  (the ADNS2610 has an 18x18 framebuffer which can't be directly addressed).
- 
- This code assumes SCLK is defined elsewhere to point to the ADNS's serial clock,
- with SDIO pointing to the data pin.
 */
 
 #include <Arduino.h>
@@ -48,6 +46,18 @@ bool MouseCam::init()
   delay(1025);
   writeRegister(regConfig, maskNoSleep); //Force the mouse to be always on.
   return true;
+}
+
+    /*
+     *
+     */
+
+uint8_t MouseCam::getId(void)
+{
+  unsigned int val;
+
+  val = readRegister(regStatus);
+  return (val & maskPID) >> 5;
 }
 
     /*
@@ -112,56 +122,47 @@ byte MouseCam::readRegister(byte addr)
   return r;
 }
 
-//ADNS2610 dumps a 324-byte array, so this function assumes arr points to a buffer of at least 324 bytes.
-void MouseCam::readFrame(byte *arr, void (*idle)(void*), void* arg)
-{
-  byte *pos;
-  byte *uBound;
-  unsigned long timeout;
-  byte val;
+    /*
+     *
+     */
 
+//ADNS2610 dumps a 324-byte array, so this function assumes arr points to a buffer of at least 324 bytes.
+bool MouseCam::readFrame(byte *frame, void (*idle)(void*), void* arg)
+{
   //Ask for a frame dump
   writeRegister(regPixelData, 0x2A);
 
-  val = 0;
-  pos = arr;
-  uBound = arr + 325;
+  const unsigned long timeout = millis() + 1000;
 
-  timeout = millis() + 1000;
-
-  //There are three terminating conditions from the following loop:
-  //1. Receive the start-of-field indicator after reading in some data (Success!)
-  //2. Pos overflows the upper bound of the array (Bad! Might happen if we miss the start-of-field marker for some reason.)
-  //3. The loop runs for more than one second (Really bad! We're not talking to the chip properly.)
-  while( millis() < timeout && pos < uBound)
+  int idx = 0;
+  while (idx <= FRAMELENGTH)
   {
-    val = readRegister(regPixelData);
+    if (millis() > timeout) {
+        //  Timeout error
+        return false;
+    }
 
-    //Only bother with the next bit if the pixel data is valid.
-    if( !(val & 64) )
+    const byte val = readRegister(regPixelData);
+
+    // loop until the data is valid
+    if (!(val & 0x40) )
     {
       if (idle)
           idle(arg);
       continue;
     }
 
-    //If we encounter a start-of-field indicator, and the cursor isn't at the first pixel,
-    //then stop. ('Cause the last pixel was the end of the frame.)
-    if( ( val & 128 ) 
-      &&  ( pos != arr) )
-      break;
+    //  Valid frame when EndOfFrame detected and all pixels acquired.
+    if ((val & 0x80) && (idx == FRAMELENGTH)) {
+      return true;
+    }
 
-    *pos = val & 63;
-    pos++;
+    *frame++ = val & 0x3F;
+    idx += 1;
   }
-}
 
-uint8_t MouseCam::getId(void)
-{
-  unsigned int val;
-
-  val = readRegister(regStatus);
-  return (val & maskPID) >> 5;
+  // EndOfFrame not seen
+  return false;
 }
 
 //  FIN
