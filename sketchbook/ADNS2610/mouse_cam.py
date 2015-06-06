@@ -115,7 +115,7 @@ def video(opts):
                         print "*",
                         hit = seg
                     print a,
-                print ":", int(360 * (hit / float(opts.segments))), "deg"
+                print ":", hit
                 show_pixels(im, lut[hit], getpixel, red)
 
             cv2.imshow("video", im)
@@ -397,7 +397,7 @@ def frame(path, opts):
 
             av = av_pixels(lut[s], getpixel)
             avs.append(av)
-			print av,
+            print av,
 
             if opts.save:
                 path = "image_%06d.png" % s
