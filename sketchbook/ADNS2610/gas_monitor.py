@@ -25,10 +25,6 @@ class Filter:
             if diff in [ -1, -2, self.sectors-1, self.sectors-2 ]:
                 #print "ignore it"
                 return
-            #print diff
-            if diff in [ -(self.sectors-1), -(self.sectors-2) ]:
-                self.rot = True
-
         if data == self.data:
             self.count += 1
         else:
@@ -36,6 +32,11 @@ class Filter:
         self.data = data
     def get(self):
         if self.count >= 3:
+            if not self.last is None:
+                diff = self.data - self.last
+                if diff in [ -(self.sectors-1), -(self.sectors-2) ]:
+                    self.rot = True
+
             self.last = self.data
             return self.data
         return None
@@ -104,7 +105,7 @@ if __name__ == "__main__":
 
         now = datetime.datetime.now()
         ymd = now.strftime("%Y/%m/%d.log")
-        hm = now.strftime("%H%M")
+        hm = now.strftime("%H%M%S")
         path = os.path.join(opts.base, ymd)
 
         dirname, x = os.path.split(path)
@@ -121,6 +122,7 @@ if __name__ == "__main__":
             this_rot = (filtered / float(opts.sectors)) * opts.rotation
             rot = this_rot + (rotations * opts.rotation)
             #print "log", hm, filtered, rotations, rot
-            print >> f, hm, filtered
+            print >> f, hm, filtered, rotations, "%.5f" % rot
+            f.flush()
 
 # FIN
