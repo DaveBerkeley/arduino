@@ -3,6 +3,7 @@
 import time
 import optparse
 import math
+import os
 
 import serial
 
@@ -118,13 +119,16 @@ def video(opts):
                 print ":", hit
                 show_pixels(im, lut[hit], getpixel, red)
 
+                if opts.graph:
+                    draw_graph(im, opts.segments, score)
+
             cv2.imshow("video", im)
             pixel = 0
 
             if opts.save:
                 path = "/tmp/mouse_image_%04d.png" % frame
                 print "save", path
-                cv2.imwrite(path, im)
+                cv2.imwrite(path, fb)
 
             if getkey() == 27: # ESC
                 break
@@ -357,7 +361,7 @@ def draw_graph(image, segs, avs):
             break
         x = int((s/float(segs)) * w)
         y = y0 + ((255-avs[s]) * (y1 - y0) / 256)
-        print s, x
+        #print s, x
         cv2.circle(image, (x, y), int(w/segs), blue, -1)
     cv2.line(image, (0, y0), (size*scale, y0), blue, 1)
     cv2.line(image, (0, y1), (size*scale, y1), blue, 1)
@@ -365,7 +369,7 @@ def draw_graph(image, segs, avs):
 #
 #
 
-def frame(path, opts):
+def frame(path, opts, once=False):
 
     detect = Detect(opts)
 
@@ -393,6 +397,7 @@ def frame(path, opts):
 
     s = 0
     paused = False
+    dead = False
     avs = []
     while True:
         if not paused:
@@ -404,14 +409,20 @@ def frame(path, opts):
             avs.append(av)
             print av,
 
+            if opts.graph:
+                draw_graph(im, segs, avs)
+
             if opts.save:
                 path = "image_%06d.png" % s
-                draw_graph(im, segs, avs)
                 cv2.imwrite(path, im)
             cv2.imshow("detect", im)
 
-        key = cv2.waitKey(500)
+        delay = 500
+        if once:
+            delay = 50
+        key = cv2.waitKey(delay)
         if key == 27:
+            dead = True
             break
         if key == ord('p'):
             paused = not paused
@@ -422,8 +433,28 @@ def frame(path, opts):
             print
             if opts.save:
                 break
+            if once:
+                break
 
     cv2.destroyAllWindows()
+    return dead
+
+#
+#
+
+def movie(opts):
+    dirname = opts.movie
+    paths = []
+    for filename in os.listdir(dirname):
+        path = os.path.join(dirname, filename)
+        paths.append(path)
+    paths.sort()
+
+    opts.movie = None
+    for path in paths:
+        print path
+        if frame(path, opts, once=True):
+            break
 
 #
 #
@@ -444,12 +475,16 @@ if __name__ == "__main__":
     p.add_option("-F", "--filter", dest="filter", action="store_true")
     p.add_option("-D", "--detect", dest="detect", action="store_true")
     p.add_option("-S", "--save", dest="save", action="store_true")
+    p.add_option("-g", "--graph", dest="graph", action="store_true")
+    p.add_option("-m", "--movie", dest="movie")
     opts, args = p.parse_args()
 
     serial_dev = opts.dev
 
     if opts.video:
         video(opts)
+    elif opts.movie:
+        movie(opts)
     else:
         frame(opts.frame, opts)
     
