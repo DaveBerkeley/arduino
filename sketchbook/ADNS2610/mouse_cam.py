@@ -121,6 +121,11 @@ def video(opts):
             cv2.imshow("video", im)
             pixel = 0
 
+            if opts.save:
+                path = "/tmp/mouse_image_%04d.png" % frame
+                print "save", path
+                cv2.imwrite(path, im)
+
             if getkey() == 27: # ESC
                 break
 
