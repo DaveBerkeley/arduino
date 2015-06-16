@@ -435,6 +435,7 @@ def frame(path, opts, once=False):
                 break
             if once:
                 break
+            avs = []
 
     cv2.destroyAllWindows()
     return dead
