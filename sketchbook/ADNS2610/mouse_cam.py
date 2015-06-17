@@ -45,10 +45,13 @@ def init_serial():
 def xy2i(x, y):
     idx = y * size
     idx += (size-1) - x
+    assert 0 <= idx < (size*size)
     return idx
 
 def i2xy(idx):
     x, y = (size-1)-(idx%size), idx/size
+    assert 0 <= x < size
+    assert 0 <= y < size
     return x, y
 
 assert xy2i(3, 7) == 140
@@ -193,7 +196,10 @@ def generate_c(lut):
         print "// segment %d" % seg
         print "const static int seg_%d[] = {" % seg
         print "   ",
+        pixels = sorted(pixels)
         for x, y in pixels:
+            assert 0 <= x < size
+            assert 0 <= y < size
             print "%d," % xy2i(x, y),
         print "-1,"
         print "};"
@@ -204,7 +210,7 @@ def generate_c(lut):
     print
     print "// Segment arrays"
     print
-    print "const static int* segs[] = {";
+    print "const int* segs[] = {";
     for seg in lut.keys():
         print "\tseg_%d," % seg
     print "\t0,"
@@ -362,7 +368,7 @@ def draw_graph(image, segs, avs):
         x = int((s/float(segs)) * w)
         y = y0 + ((255-avs[s]) * (y1 - y0) / 256)
         #print s, x
-        cv2.circle(image, (x, y), int(w/segs), blue, -1)
+        cv2.circle(image, (x, y), 4, blue, -1)
     cv2.line(image, (0, y0), (size*scale, y0), blue, 1)
     cv2.line(image, (0, y1), (size*scale, y1), blue, 1)
 
@@ -468,7 +474,7 @@ if __name__ == "__main__":
     p.add_option("-c", "--c", dest="c", action="store_true")
     p.add_option("-f", "--frame", dest="frame")
     p.add_option("-r", "--r1", dest="r1", type="float", default=5.0)
-    p.add_option("-R", "--r2", dest="r2", type="float", default=12.0)
+    p.add_option("-R", "--r2", dest="r2", type="float", default=9.5)
     p.add_option("-x", "--x0", dest="x0", type="float", default=9.5)
     p.add_option("-y", "--y0", dest="y0", type="float", default=9.5)
     p.add_option("-s", "--segments", dest="segments", type="int", default=64)

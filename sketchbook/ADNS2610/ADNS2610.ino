@@ -35,7 +35,7 @@ void error()
 //    ./mouse_cam.py -c > sectors.c
 // to generate.
 
-#include "sectors.c"
+extern const int* segs[];
 
 static int find_seg(const byte* frame)
 {
@@ -98,7 +98,7 @@ void loop()
 {
   static bool video = false;
   static bool bad_frame = false;
-  
+
   if (Serial.available()) {
     int c = Serial.read();
     switch (c)
@@ -111,9 +111,15 @@ void loop()
   digitalWrite(LED, bad_frame ? HIGH : LOW);
   if (bad_frame)
     bad_frame = false;
+
   byte frame[MouseCam::FRAMELENGTH];
-  if (!mouse.readFrame(frame)) {
+  const bool okay = mouse.readFrame(frame);
+
+  if (!okay) {
     bad_frame = true;
+    if (!video) {
+      Serial.print("-1\r\n");
+    }
     return; // error reading frame
   }
 
