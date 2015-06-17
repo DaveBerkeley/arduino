@@ -1,5 +1,7 @@
 
 
+#include <avr/pgmspace.h>
+
 #include <Arduino.h>
 #include <ADNS2610.h>
 
@@ -43,13 +45,17 @@ static int find_seg(const byte* frame)
     int lowest_seg = -1;
 
     for (int seg = 0; ; seg++) {
-        const int* segment = segs[seg];
+        const int* PROGMEM segment = segs[seg];
         if (!segment)
           break;
         int total = 0;
         int count = 0;
-        for (; *segment != -1; segment++) {
-            const byte pixel = frame[*segment];
+        while (true) {
+            const int idx = pgm_read_word(segment);
+            if (idx == -1)
+              break;
+            const byte pixel = frame[idx];
+            segment += 1;
             total += pixel;
             count += 1;
         }

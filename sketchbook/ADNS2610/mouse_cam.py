@@ -190,11 +190,14 @@ def generate_c(lut):
 
     print "// Auto generated. Do not edit"
     print "//"
+    print 
+    print "#include <avr/pgmspace.h>"
+    print 
 
     def print_seg(seg, pixels):
         print
         print "// segment %d" % seg
-        print "const static int seg_%d[] = {" % seg
+        print "const static int seg_%d[] PROGMEM = {" % seg
         print "   ",
         pixels = sorted(pixels)
         for x, y in pixels:
