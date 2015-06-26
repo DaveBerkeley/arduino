@@ -77,6 +77,12 @@ def video(opts):
 
     lut = detect.make_lut()
 
+    if opts.average:
+        av = cv2.imread(opts.average)
+        av = cv2.cvtColor(av, cv2.COLOR_BGR2GRAY)
+    else:
+        av = None
+
     frame = 0
     pixel = 0
     while True:
@@ -95,6 +101,9 @@ def video(opts):
                 #prev = fb
                 fb = b
                 prev = b
+
+            if not av is None:
+                fb -= av
 
             if opts.autogain:
                 m = numpy.max(fb)
@@ -133,7 +142,8 @@ def video(opts):
                 print "save", path
                 cv2.imwrite(path, fb)
 
-            if getkey() == 27: # ESC
+            key = getkey()
+            if key == 27: # ESC
                 break
 
         else:
@@ -456,6 +466,8 @@ def movie(opts):
     dirname = opts.movie
     paths = []
     for filename in os.listdir(dirname):
+        if not filename.endswith(".png"):
+            continue
         path = os.path.join(dirname, filename)
         paths.append(path)
     paths.sort()
@@ -469,6 +481,43 @@ def movie(opts):
 #
 #
 
+def makeref(opts):
+    files = []
+    base = "/tmp/"
+    for filename in os.listdir(base):
+        if not filename.startswith("mouse_image"):
+            continue
+        path = os.path.join(base, filename)
+        files.append(path)
+
+    files.sort()
+
+    size = 18
+    fb = numpy.zeros((size, size), numpy.float)
+
+    image = numpy.zeros((size,size), dtype=numpy.float32)
+    fb = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+
+    found = 0
+    for path in files:
+        print path
+        found += 1
+
+        dial = cv2.imread(path)
+        if fb is None:
+            fb = dial
+        else:
+            fb += dial
+
+    fb /= found
+
+    opath = "av.png"
+    print "writing", opath
+    cv2.imwrite(opath, fb)
+
+#
+#
+
 if __name__ == "__main__":
     p = optparse.OptionParser()
     p.add_option("-d", "--dev", dest="dev", default="/dev/nano")
@@ -477,7 +526,7 @@ if __name__ == "__main__":
     p.add_option("-c", "--c", dest="c", action="store_true")
     p.add_option("-f", "--frame", dest="frame")
     p.add_option("-r", "--r1", dest="r1", type="float", default=5.0)
-    p.add_option("-R", "--r2", dest="r2", type="float", default=9.5)
+    p.add_option("-R", "--r2", dest="r2", type="float", default=15)
     p.add_option("-x", "--x0", dest="x0", type="float", default=9.5)
     p.add_option("-y", "--y0", dest="y0", type="float", default=9.5)
     p.add_option("-s", "--segments", dest="segments", type="int", default=64)
@@ -487,6 +536,8 @@ if __name__ == "__main__":
     p.add_option("-S", "--save", dest="save", action="store_true")
     p.add_option("-g", "--graph", dest="graph", action="store_true")
     p.add_option("-m", "--movie", dest="movie")
+    p.add_option("-A", "--average", dest="average")
+    p.add_option("-M", "--makeref", dest="makeref", action="store_true")
     opts, args = p.parse_args()
 
     serial_dev = opts.dev
@@ -495,6 +546,8 @@ if __name__ == "__main__":
         video(opts)
     elif opts.movie:
         movie(opts)
+    elif opts.makeref:
+        makeref(opts)
     else:
         frame(opts.frame, opts)
     
