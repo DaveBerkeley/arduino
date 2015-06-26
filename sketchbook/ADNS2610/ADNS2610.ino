@@ -68,6 +68,17 @@ static int find_seg(const byte* frame)
     return lowest_seg;
 }
 
+extern uint8_t ref_image[];
+
+static void remove_ref(byte* frame)
+{
+  const byte* ref = ref_image;
+  for (int i = 0; i < MouseCam::FRAMELENGTH; ++i) {
+    *frame -= *ref++;
+    *frame++ += 0x1F;
+  }
+}
+
   /*
   *
   */
@@ -104,6 +115,7 @@ void loop()
 {
   static bool video = false;
   static bool bad_frame = false;
+  static bool sub_ref = false;
 
   if (Serial.available()) {
     int c = Serial.read();
@@ -111,6 +123,8 @@ void loop()
     {
       case 'v'  :  video = true;   break;
       case 'd'  :  video = false;  break;
+      case 'r'  :  sub_ref = true;  break;
+      case 'n'  :  sub_ref = false;  break;
     }
   }
 
@@ -120,7 +134,7 @@ void loop()
 
   byte frame[MouseCam::FRAMELENGTH];
   const bool okay = mouse.readFrame(frame);
-
+  
   if (!okay) {
     bad_frame = true;
     if (!video) {
@@ -130,14 +144,19 @@ void loop()
   }
 
   if (video) {
+    if (sub_ref)
+      remove_ref(frame);
     for (int i = 0; i < mouse.FRAMELENGTH; i++)
     {
       Serial.print((char) (frame[i] & 0x3F));
+      // output the reference image
+      //Serial.print((char) (ref_image[i] & 0x3F));
     }
     Serial.print(char(0x80)); // end of frame marker
   }
   else
   {
+    remove_ref(frame);
     const int seg = find_seg(frame);
     Serial.print(seg);
     Serial.print("\r\n");

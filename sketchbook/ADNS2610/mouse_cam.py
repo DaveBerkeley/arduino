@@ -64,7 +64,7 @@ def getkey():
 
 def video(opts):
     s = init_serial()
-    s.write('v')
+    s.write('vn')
 
     cv2.namedWindow("video", 1)
 
@@ -89,26 +89,25 @@ def video(opts):
         c = s.read(1)
         if not c:
             time.sleep(0.1)
-            s.write('v')
+            if opts.subref:
+                s.write('vr')
+            else:
+                s.write('v')
             continue
         if ord(c[0]) & 0x80: # end of frame
             print "frame", frame, pixel, size * size
             frame += 1
 
-            if opts.filter:
-                filt = 0.9
-                b = (filt * prev) + ((1 - filt) * fb)
-                #prev = fb
-                fb = b
-                prev = b
-
             if not av is None:
                 fb -= av
 
             if opts.autogain:
-                m = numpy.max(fb)
-                if m:
-                    fb = fb * int(255.0 / m)
+                ma = numpy.max(fb)
+                mi = numpy.min(fb)
+                g = int(255.0 / (ma - mi))
+                if ma:
+                    fb -= mi
+                    fb *= g
 
             def getpixel(x, y):
                 p = int(fb[y][x])
@@ -460,10 +459,9 @@ def frame(path, opts, once=False):
     return dead
 
 #
-#
+#   get all the images in a directory, sorted
 
-def movie(opts):
-    dirname = opts.movie
+def get_images(dirname):
     paths = []
     for filename in os.listdir(dirname):
         if not filename.endswith(".png"):
@@ -471,7 +469,13 @@ def movie(opts):
         path = os.path.join(dirname, filename)
         paths.append(path)
     paths.sort()
+    return paths
 
+#
+#
+
+def movie(opts):
+    paths = get_images(opts.movie)
     opts.movie = None
     for path in paths:
         print path
@@ -482,15 +486,7 @@ def movie(opts):
 #
 
 def makeref(opts):
-    files = []
-    base = "/tmp/"
-    for filename in os.listdir(base):
-        if not filename.startswith("mouse_image"):
-            continue
-        path = os.path.join(base, filename)
-        files.append(path)
-
-    files.sort()
+    files = get_images(opts.makeref)
 
     size = 18
     fb = numpy.zeros((size, size), numpy.float)
@@ -500,7 +496,8 @@ def makeref(opts):
 
     found = 0
     for path in files:
-        print path
+        if not opts.c:
+            print path
         found += 1
 
         dial = cv2.imread(path)
@@ -512,8 +509,36 @@ def makeref(opts):
     fb /= found
 
     opath = "av.png"
-    print "writing", opath
+    if not opts.c:
+        print "writing", opath
     cv2.imwrite(opath, fb)
+
+    if opts.c:
+        # generate C code for the image
+        c_image(fb, opath)
+
+#
+#
+
+def c_image(fb, name):
+    print "// auto-generated, do not edit"
+    print
+    print "// filename :", name
+    print
+    print "#include <stdint.h>"
+    print
+    print "const uint8_t ref_image[%d] = {" % (size * size)
+    i = 0
+    while i < (size*size):
+        x, y = i2xy(i)
+        pixel = fb[x][y][0]
+        pixel /= 4
+        print "%d," % int(pixel),
+        i += 1
+        if not (i % size):
+            print
+    print "};"
+    print 
 
 #
 #
@@ -531,13 +556,13 @@ if __name__ == "__main__":
     p.add_option("-y", "--y0", dest="y0", type="float", default=9.5)
     p.add_option("-s", "--segments", dest="segments", type="int", default=64)
     p.add_option("-a", "--autogain", dest="autogain", action="store_true")
-    p.add_option("-F", "--filter", dest="filter", action="store_true")
     p.add_option("-D", "--detect", dest="detect", action="store_true")
     p.add_option("-S", "--save", dest="save", action="store_true")
     p.add_option("-g", "--graph", dest="graph", action="store_true")
     p.add_option("-m", "--movie", dest="movie")
     p.add_option("-A", "--average", dest="average")
-    p.add_option("-M", "--makeref", dest="makeref", action="store_true")
+    p.add_option("-M", "--makeref", dest="makeref")
+    p.add_option("-b", "--subref", dest="subref", action="store_true")
     opts, args = p.parse_args()
 
     serial_dev = opts.dev
