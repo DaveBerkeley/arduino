@@ -511,7 +511,7 @@ def makeref(opts):
     opath = "av.png"
     if not opts.c:
         print "writing", opath
-    cv2.imwrite(opath, fb)
+        cv2.imwrite(opath, fb)
 
     if opts.c:
         # generate C code for the image
@@ -533,6 +533,8 @@ def c_image(fb, name):
         x, y = i2xy(i)
         pixel = fb[x][y][0]
         pixel /= 4
+        if not (i % size):
+            print "  ",
         print "%d," % int(pixel),
         i += 1
         if not (i % size):
