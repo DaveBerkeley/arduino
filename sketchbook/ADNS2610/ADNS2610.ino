@@ -74,8 +74,8 @@ static void remove_ref(byte* frame)
 {
   const byte* ref = ref_image;
   for (int i = 0; i < MouseCam::FRAMELENGTH; ++i) {
-    *frame -= *ref++;
-    *frame++ += 0x1F;
+    *frame -= *ref++; // subtract reference frame
+    *frame++ += 0x1F; // normalise brightness to mid level
   }
 }
 
