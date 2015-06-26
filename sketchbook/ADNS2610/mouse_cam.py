@@ -104,10 +104,11 @@ def video(opts):
             if opts.autogain:
                 ma = numpy.max(fb)
                 mi = numpy.min(fb)
-                g = int(255.0 / (ma - mi))
-                if ma:
-                    fb -= mi
-                    fb *= g
+                if int(ma - mi) > 0:
+                    g = int(255.0 / (ma - mi))
+                    if ma:
+                        fb -= mi
+                        fb *= g
 
             def getpixel(x, y):
                 p = int(fb[y][x])
