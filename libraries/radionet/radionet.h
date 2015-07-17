@@ -23,8 +23,8 @@ private:
 public:
 
   enum {
-    ACK = 0x8000,
-    ADMIN = 0x4000,
+    ACK = 0x8000,   // set if ACK is required
+    ADMIN = 0x4000, // set if 'hello' requested
   };
 
   // Data Payloads
@@ -32,20 +32,6 @@ public:
     TEXT = 0x2000,
     USER_MASK = 0x1FFF,
   };
-
-  // Admin Payloads
-  //enum {
-  //    BANNER = 0x2000,
-  //    UID = 0x1000, // TODO
-  //    INFO = 0x0800,
-  //    NEIGHBOURS = 0x0400, // TODO
-  //};
-
-  // INFO
-  //enum {
-  //    BATTERY = 0x8000,
-  //    // reserved
-  //};
 
   Message(int msg_id, int dest)
   {
