@@ -218,6 +218,8 @@ static int get_temperature(int pin) {
   *
   */
 
+// Map of unknown devices
+static uint32_t unknown_devs;
 
 // 'present' flags
 #define PRESENT_TEMP 0x01
@@ -230,6 +232,18 @@ static int decode_command(uint8_t* data, int length)
 
   if (!(command.get_ack()))
     return 0;
+  
+  if (length > 4) {
+    uint32_t mask;
+    if (command.extract(1<<0, & mask, sizeof(mask))) {
+      unknown_devs = mask;
+      if (mask) {
+        status.set(8000);
+      }
+    } else {
+      status.set(0);
+    }
+  }
 
   Message response(command.get_mid(), GATEWAY_ID);
   const uint16_t t = get_temperature(TEMP_PIN);
@@ -275,6 +289,10 @@ static uint8_t auto_dest;
 
 Parser parser;
 
+  /*
+  *  Main loop
+  */
+
 void loop () {
   
   static int hasSend = 0;
@@ -305,6 +323,10 @@ void loop () {
       tx.set(FLASH_PERIOD);
  
       Message msg(auto_ack_id, auto_dest);
+ 
+      if (unknown_devs & (1<<auto_dest)) {
+        msg.set_admin();
+      }
  
       rf12_sendStart(auto_dest, msg.data(), msg.size());
       auto_ack_id = 0;
