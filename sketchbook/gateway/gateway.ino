@@ -66,12 +66,12 @@ public:
 
 static Port leds(2);
 
-static void tx_led(byte on) 
+static void tx_led(bool on) 
 {
   leds.digiWrite(on);
 }
 
-static void rx_led(byte on) 
+static void rx_led(bool on) 
 {
   leds.digiWrite2(!on);
 }
