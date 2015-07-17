@@ -177,10 +177,13 @@ void loop()
         ack_id = 0;
         if (state == WAIT_FOR_ACK) {
           // if we have our ack, go back to sleep
-          if (m.get_mid() == message.get_mid()) {
-            // TODO : if the PIR is active it will be power hungry
-            // turn it off here for a while
-            sleep();
+          if (m.get_admin()) {
+            state = START;
+            test_led(1);
+          } else {
+            if (m.get_mid() == message.get_mid()) {
+              sleep();
+            }
           }
         }
       }
@@ -188,18 +191,17 @@ void loop()
   }
 
   if (state == START) {
+    Serial.print("hello\r\n");
     send_text(banner, ack_id, false);
     rf12_sendWait(0);
     sleep_count = 0;
     ack_id = 0;
+    test_led(0);
     sleep();
     return;
   }
 
   if (state == SLEEP) {
-    //static uint16_t last_changes = -1;
-    //if (changes != last_changes) {
-      // PIR sensor has changed state
       Serial.println("send");
       //last_changes = changes;
       state = SENDING;
@@ -209,16 +211,6 @@ void loop()
       // turn the radio on
       rf12_sleep(-1);
       return;
-    //}
-
-    // we've woken from sleep with no changes
-    //if (++sleep_count >= LONG_WAIT) {
-    //  state = START;
-    //} else {
-    //  // go back to ...
-    //  sleep();
-    //}
-    //return;
   }
 
   if (state == SENDING) {
