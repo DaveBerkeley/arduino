@@ -2,7 +2,7 @@
 class LED {
 private:
   void (*m_fn)(bool on);
-  int m_count;
+  uint16_t m_count;
 public:
   LED(void (*fn)(bool on))
   : m_fn(fn),
@@ -10,7 +10,7 @@ public:
   {
   }
 
-  void set(int count)
+  void set(uint16_t count)
   {
     (*m_fn)(count > 0);
     m_count = count;
