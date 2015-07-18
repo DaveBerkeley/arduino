@@ -33,20 +33,10 @@ static const char* banner = "Test Device v1.0";
 
 #define TEMPERATURE_PIN 0
 
-Port pir(1);
 Port led(2);
 
 static uint16_t ack_id;
 static byte my_node = 0;
-
-typedef enum {
-  START=0,
-  SLEEP,
-  SENDING,
-  WAIT_FOR_ACK,
-} STATE;
-
-static STATE state;
 
 #define ACK_WAIT_MS 100
 #define ACK_RETRIES 5
@@ -80,16 +70,43 @@ static void test_led(byte on)
 static const float temp_scale = (1.1 * 100) / 1024;
 
 static int get_temperature(int pin) {
-  uint16_t analog = analogRead(pin);
-  const float t = temp_scale * analog;
-  return int(t * 100);
+  static int t;
+  return ++t * 100;
+  //uint16_t analog = analogRead(pin);
+  //const float t = temp_scale * analog;
+  //return int(t * 100);
 }
+
+  /*
+  *
+  */
+  
+class Radio {
+public:
+  typedef enum {
+    START=0,
+    SLEEP,
+    SENDING,
+    WAIT_FOR_ACK,
+  } STATE;
+
+  STATE state;
+
+  Radio()
+  {
+  }
+  
+  void init(void)
+  {
+    my_node = rf12_configSilent();
+  }
+};
+
+static Radio radio;
 
  /*
   * Fall into a deep sleep
   */
-
-static uint16_t sleep_count = 0;
 
 #define SLEEP_TIME (32000)
 static const int LONG_WAIT = 1;
@@ -99,7 +116,7 @@ static void sleep(uint16_t time=SLEEP_TIME)
   ok_led(0);
   test_led(0);
   rf12_sleep(0); // turn the radio off
-  state = SLEEP;
+  radio.state = Radio::SLEEP;
   //Serial.flush(); // wait for output to complete
   Sleepy::loseSomeTime(time);
 }
@@ -123,28 +140,25 @@ void make_message(Message* msg, int msg_id, bool ack)
  /*
   *
   */
-
-#define IRQ 1
   
 void setup() 
 {
   ok_led(0);
   test_led(0);
-  pir.digiWrite3(0);
   
   led.mode(OUTPUT);  
   led.mode2(OUTPUT);  
-  pir.mode3(INPUT);
 
   Serial.begin(57600);
   Serial.println(banner);
 
-  my_node = rf12_configSilent();
+  //my_node = rf12_configSilent();
+  radio.init();
 
   // use the 1.1V internal ref for the ADC
   analogReference(INTERNAL);
 
-  state = START;
+  radio.state = Radio::START;
 }
 
  /*
@@ -168,10 +182,10 @@ void loop()
       else
       {
         ack_id = 0;
-        if (state == WAIT_FOR_ACK) {
+        if (radio.state == Radio::WAIT_FOR_ACK) {
           // if we have our ack, go back to sleep
           if (m.get_admin()) {
-            state = START;
+            radio.state = Radio::START;
             test_led(1);
           } else {
             if (m.get_mid() == message.get_mid()) {
@@ -183,44 +197,42 @@ void loop()
     }
   }
 
-  if (state == START) {
+  if (radio.state == Radio::START) {
     Serial.print("hello\r\n");
     send_text(banner, ack_id, false);
     rf12_sendWait(0);
-    sleep_count = 0;
     ack_id = 0;
     test_led(0);
     sleep();
     return;
   }
 
-  if (state == SLEEP) {
+  if (radio.state == Radio::SLEEP) {
       Serial.println("send");
-      state = SENDING;
+      radio.state = Radio::SENDING;
       retries = ACK_RETRIES;
-      sleep_count = 0;
       make_message(& message, make_mid(), true);      
       // turn the radio on
       rf12_sleep(-1);
       return;
   }
 
-  if (state == SENDING) {
+  if (radio.state == Radio::SENDING) {
     if (rf12_canSend()) {
       // report the change
       send_message(& message);
       rf12_sendWait(0); // NORMAL when finished
-      state = WAIT_FOR_ACK;
+      radio.state = Radio::WAIT_FOR_ACK;
       wait_until = millis() + ACK_WAIT_MS;
     }
     return;
   }
 
-  if (state == WAIT_FOR_ACK) {
+  if (radio.state == Radio::WAIT_FOR_ACK) {
     if (millis() > wait_until)
     {
         if (--retries)
-            state = SENDING; // try again
+            radio.state = Radio::SENDING; // try again
         else
             sleep();
     }
