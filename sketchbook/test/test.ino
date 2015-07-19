@@ -100,6 +100,18 @@ public:
   {
     my_node = rf12_configSilent();
   }
+
+  static const int SLEEP_TIME = 32000;
+
+  void sleep(uint16_t time=SLEEP_TIME)
+  {
+    ok_led(0);
+    test_led(0);
+    rf12_sleep(0); // turn the radio off
+    state = SLEEP;
+    //Serial.flush(); // wait for output to complete
+    Sleepy::loseSomeTime(time);
+  }
 };
 
 static Radio radio;
@@ -108,18 +120,7 @@ static Radio radio;
   * Fall into a deep sleep
   */
 
-#define SLEEP_TIME (32000)
 static const int LONG_WAIT = 1;
-
-static void sleep(uint16_t time=SLEEP_TIME)
-{
-  ok_led(0);
-  test_led(0);
-  rf12_sleep(0); // turn the radio off
-  radio.state = Radio::SLEEP;
-  //Serial.flush(); // wait for output to complete
-  Sleepy::loseSomeTime(time);
-}
 
  /*
   * Build a data Message 
@@ -189,7 +190,7 @@ void loop()
             test_led(1);
           } else {
             if (m.get_mid() == message.get_mid()) {
-              sleep();
+              radio.sleep();
             }
           }
         }
@@ -203,7 +204,7 @@ void loop()
     rf12_sendWait(0);
     ack_id = 0;
     test_led(0);
-    sleep();
+    radio.sleep();
     return;
   }
 
@@ -234,7 +235,7 @@ void loop()
         if (--retries)
             radio.state = Radio::SENDING; // try again
         else
-            sleep();
+            radio.sleep();
     }
   }
 }
