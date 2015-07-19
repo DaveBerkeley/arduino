@@ -26,8 +26,6 @@
    *
    */
 
-static const char* banner = "Test Device v1.0";
-
 // node -> gateway data
 #define PRESENT_TEMPERATURE (1 << 1)
 
@@ -95,6 +93,8 @@ public:
   Radio()
   {
   }
+
+  virtual const char* banner() = 0;
   
   void init(void)
   {
@@ -114,7 +114,16 @@ public:
   }
 };
 
-static Radio radio;
+class TestRadio : public Radio
+{
+public:
+  virtual const char* banner()
+  {
+    return "Test Device v1.0";
+  }
+};
+
+static TestRadio radio;
 
  /*
   * Fall into a deep sleep
@@ -151,7 +160,7 @@ void setup()
   led.mode2(OUTPUT);  
 
   Serial.begin(57600);
-  Serial.println(banner);
+  Serial.println(radio.banner());
 
   //my_node = rf12_configSilent();
   radio.init();
@@ -200,7 +209,7 @@ void loop()
 
   if (radio.state == Radio::START) {
     Serial.print("hello\r\n");
-    send_text(banner, ack_id, false);
+    send_text(radio.banner(), ack_id, false);
     rf12_sendWait(0);
     ack_id = 0;
     test_led(0);
