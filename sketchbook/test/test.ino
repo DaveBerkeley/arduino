@@ -112,6 +112,24 @@ public:
     //Serial.flush(); // wait for output to complete
     Sleepy::loseSomeTime(time);
   }
+
+   /*
+    * Build a data Message 
+    */
+  
+  virtual void append_message(Message* msg) = 0;
+
+  void make_message(Message* msg, int msg_id, bool ack) 
+  {
+    msg->reset();
+    msg->set_dest(GATEWAY_ID);
+    msg->set_mid(msg_id);
+    if (ack)
+      msg->set_ack();
+   
+    append_message(msg);
+  }
+
 };
 
 class TestRadio : public Radio
@@ -120,6 +138,12 @@ public:
   virtual const char* banner()
   {
     return "Test Device v1.0";
+  }
+
+  virtual void append_message(Message* msg)
+  {
+    const uint16_t t = get_temperature(TEMPERATURE_PIN);
+    msg->append(PRESENT_TEMPERATURE, & t, sizeof(t));
   }
 };
 
@@ -130,22 +154,6 @@ static TestRadio radio;
   */
 
 static const int LONG_WAIT = 1;
-
- /*
-  * Build a data Message 
-  */
-
-void make_message(Message* msg, int msg_id, bool ack) 
-{
-  msg->reset();
-  msg->set_dest(GATEWAY_ID);
-  msg->set_mid(msg_id);
-  if (ack)
-    msg->set_ack();
-
-  const uint16_t t = get_temperature(TEMPERATURE_PIN);
-  msg->append(PRESENT_TEMPERATURE, & t, sizeof(t));
-}
 
  /*
   *
@@ -221,7 +229,7 @@ void loop()
       Serial.println("send");
       radio.state = Radio::SENDING;
       retries = ACK_RETRIES;
-      make_message(& message, make_mid(), true);      
+      radio.make_message(& message, make_mid(), true);      
       // turn the radio on
       rf12_sleep(-1);
       return;
