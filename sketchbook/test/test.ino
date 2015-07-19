@@ -33,11 +33,8 @@ EMPTY_INTERRUPT(WDT_vect);
   *
   */
   
-#define ACK_WAIT_MS 100
-#define ACK_RETRIES 5
-
 class Radio {
-public:
+private:
   typedef enum {
     START=0,
     SLEEP,
@@ -46,14 +43,20 @@ public:
   } STATE;
 
   STATE state;
-  byte my_node = 0;
+  byte my_node;
   uint16_t ack_id;
   uint8_t retries;
   Message message;
   uint32_t wait_until = 0;
+  uint8_t gateway_id;
 
-  Radio()
-  : message(0, GATEWAY_ID)
+  static const int ACK_WAIT_MS = 100;
+  static const int ACK_RETRIES = 5;
+
+public:
+  Radio(uint8_t gateway_id)
+  : message(0, gateway_id),
+    gateway_id(gateway_id)
   {
   }
 
@@ -62,6 +65,7 @@ public:
   virtual void init(void)
   {
     my_node = rf12_configSilent();
+    state = START;
   }
   
   typedef enum {
@@ -71,9 +75,9 @@ public:
   
   virtual void set_led(LED idx, bool state) = 0;
 
-  static const int SLEEP_TIME = 32000;
+  static const uint16_t SLEEP_TIME = 32000;
 
-  void sleep(uint16_t time=SLEEP_TIME)
+  void sleep(uint16_t time)
   {
     set_led(OK, 0);
     set_led(TEST, 0);
@@ -92,15 +96,17 @@ public:
   void make_message(Message* msg, int msg_id, bool ack) 
   {
     msg->reset();
-    msg->set_dest(GATEWAY_ID);
+    msg->set_dest(gateway_id);
     msg->set_mid(msg_id);
     if (ack)
       msg->set_ack();
    
     append_message(msg);
   }
-  
-  void loop(void)
+
+  virtual void loop(void) = 0;
+
+  void radio_loop(uint16_t time)
   {
     set_led(OK, 1); // show we are awake
 
@@ -122,7 +128,7 @@ public:
               set_led(TEST, 1);
             } else {
               if (m.get_mid() == message.get_mid()) {
-                sleep();
+                sleep(time);
               }
             }
           }
@@ -136,7 +142,7 @@ public:
       rf12_sendWait(0);
       ack_id = 0;
       set_led(TEST, 0);
-      sleep();
+      sleep(time);
       return;
     }
   
@@ -164,27 +170,28 @@ public:
     if (state == WAIT_FOR_ACK) {
       if (millis() > wait_until)
       {
-          if (--retries)
-              state = SENDING; // try again
-          else
-              sleep();
+        if (--retries) {
+          state = SENDING; // try again
+        } else {
+          sleep(time);
+        }
       }
     }
   }
 };
 
   /*
-  *
+  *  Derived Class
+  */
+
+ /*
+  *  Temperature 
   */
 
 // node -> gateway data
 #define PRESENT_TEMPERATURE (1 << 1)
 
 #define TEMPERATURE_PIN 0
-
- /*
-  *  Temperature 
-  */
 
 static const float temp_scale = (1.1 * 100) / 1024;
 
@@ -212,8 +219,9 @@ class TestRadio : public Radio
 
 public:
 
-  TestRadio()
-  : led(2)
+  TestRadio(uint8_t gateway_id)
+  : Radio(gateway_id),
+    led(2)
   {
   }
 
@@ -226,6 +234,9 @@ public:
     led.mode2(OUTPUT);  
 
     Radio::init();
+
+    // use the 1.1V internal ref for the ADC
+    analogReference(INTERNAL);
   }
 
   virtual const char* banner()
@@ -246,9 +257,14 @@ public:
       case   TEST :  test_led(state);  break;
     }
   }
+  
+  virtual void loop(void)
+  {
+    radio_loop(32000);
+  }
 };
 
-static TestRadio radio;
+static TestRadio radio(GATEWAY_ID);
 
  /*
   *
@@ -259,13 +275,7 @@ void setup()
   Serial.begin(57600);
   Serial.println(radio.banner());
 
-  //my_node = rf12_configSilent();
   radio.init();
-
-  // use the 1.1V internal ref for the ADC
-  analogReference(INTERNAL);
-
-  radio.state = Radio::START;
 }
 
  /*
