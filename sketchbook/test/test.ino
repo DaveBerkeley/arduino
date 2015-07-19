@@ -26,15 +26,9 @@
    *
    */
 
-// node -> gateway data
-#define PRESENT_TEMPERATURE (1 << 1)
-
-#define TEMPERATURE_PIN 0
-
 Port led(2);
 
 static uint16_t ack_id;
-static byte my_node = 0;
 
 #define ACK_WAIT_MS 100
 #define ACK_RETRIES 5
@@ -61,20 +55,6 @@ static void test_led(byte on)
   led.digiWrite2(!on);
 }
 
- /*
-  *  Temperature 
-  */
-
-static const float temp_scale = (1.1 * 100) / 1024;
-
-static int get_temperature(int pin) {
-  static int t;
-  return ++t * 100;
-  //uint16_t analog = analogRead(pin);
-  //const float t = temp_scale * analog;
-  //return int(t * 100);
-}
-
   /*
   *
   */
@@ -89,6 +69,7 @@ public:
   } STATE;
 
   STATE state;
+  byte my_node = 0;
 
   Radio()
   {
@@ -132,6 +113,29 @@ public:
 
 };
 
+  /*
+  *
+  */
+
+// node -> gateway data
+#define PRESENT_TEMPERATURE (1 << 1)
+
+#define TEMPERATURE_PIN 0
+
+ /*
+  *  Temperature 
+  */
+
+static const float temp_scale = (1.1 * 100) / 1024;
+
+static int get_temperature(int pin) {
+  static int t;
+  return ++t * 100;
+  //uint16_t analog = analogRead(pin);
+  //const float t = temp_scale * analog;
+  //return int(t * 100);
+}
+
 class TestRadio : public Radio
 {
 public:
@@ -150,12 +154,6 @@ public:
 static TestRadio radio;
 
  /*
-  * Fall into a deep sleep
-  */
-
-static const int LONG_WAIT = 1;
-
- /*
   *
   */
   
@@ -163,7 +161,7 @@ void setup()
 {
   ok_led(0);
   test_led(0);
-  
+
   led.mode(OUTPUT);  
   led.mode2(OUTPUT);  
 
@@ -185,14 +183,12 @@ void setup()
 
 void loop()
 {
-  static uint16_t changes = 0;
-  
   ok_led(1); // show we are awake
 
   if (rf12_recvDone() && (rf12_crc == 0)) {
     Message m((void*) & rf12_data[0]);
 
-    if (m.get_dest() == my_node) {
+    if (m.get_dest() == radio.my_node) {
       if (m.get_ack()) {
         // ack the info
         ack_id = m.get_mid();
