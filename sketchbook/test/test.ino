@@ -29,22 +29,6 @@
 // needed by the watchdog code
 EMPTY_INTERRUPT(WDT_vect);
 
- /*
-  * IO
-  */
-
-Port led(2);
-
-static void ok_led(byte on) 
-{
-  led.digiWrite(on);
-}
-
-static void test_led(byte on) 
-{
-  led.digiWrite2(!on);
-}
-
   /*
   *
   */
@@ -75,17 +59,24 @@ public:
 
   virtual const char* banner() = 0;
   
-  void init(void)
+  virtual void init(void)
   {
     my_node = rf12_configSilent();
   }
+  
+  typedef enum {
+    OK,
+    TEST,
+  }  LED;
+  
+  virtual void set_led(LED idx, bool state) = 0;
 
   static const int SLEEP_TIME = 32000;
 
   void sleep(uint16_t time=SLEEP_TIME)
   {
-    ok_led(0);
-    test_led(0);
+    set_led(OK, 0);
+    set_led(TEST, 0);
     rf12_sleep(0); // turn the radio off
     state = SLEEP;
     //Serial.flush(); // wait for output to complete
@@ -111,7 +102,7 @@ public:
   
   void loop(void)
   {
-    ok_led(1); // show we are awake
+    set_led(OK, 1); // show we are awake
 
     if (rf12_recvDone() && (rf12_crc == 0)) {
       Message m((void*) & rf12_data[0]);
@@ -128,7 +119,7 @@ public:
             // if we have our ack, go back to sleep
             if (m.get_admin()) {
               state = START;
-              test_led(1);
+              set_led(TEST, 1);
             } else {
               if (m.get_mid() == message.get_mid()) {
                 sleep();
@@ -144,7 +135,7 @@ public:
       send_text(banner(), ack_id, false);
       rf12_sendWait(0);
       ack_id = 0;
-      test_led(0);
+      set_led(TEST, 0);
       sleep();
       return;
     }
@@ -207,7 +198,36 @@ static int get_temperature(int pin) {
 
 class TestRadio : public Radio
 {
+  Port led;
+
+  void ok_led(byte on) 
+  {
+    led.digiWrite(on);
+  }
+
+  void test_led(byte on) 
+  {
+    led.digiWrite2(!on);
+  }
+
 public:
+
+  TestRadio()
+  : led(2)
+  {
+  }
+
+  virtual void init()
+  {
+    ok_led(0);
+    test_led(0);
+
+    led.mode(OUTPUT);  
+    led.mode2(OUTPUT);  
+
+    Radio::init();
+  }
+
   virtual const char* banner()
   {
     return "Test Device v1.0";
@@ -217,6 +237,14 @@ public:
   {
     const uint16_t t = get_temperature(TEMPERATURE_PIN);
     msg->append(PRESENT_TEMPERATURE, & t, sizeof(t));
+  }
+
+  virtual void set_led(LED idx, bool state)
+  {
+    switch (idx) {
+      case   OK   :  ok_led(state);  break;
+      case   TEST :  test_led(state);  break;
+    }
   }
 };
 
@@ -228,12 +256,6 @@ static TestRadio radio;
   
 void setup() 
 {
-  ok_led(0);
-  test_led(0);
-
-  led.mode(OUTPUT);  
-  led.mode2(OUTPUT);  
-
   Serial.begin(57600);
   Serial.println(radio.banner());
 
