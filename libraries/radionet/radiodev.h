@@ -21,35 +21,30 @@ private:
   static const int ACK_WAIT_MS = 100;
   static const int ACK_RETRIES = 5;
 
-public:
+  void sleep(uint16_t time);
+  void make_message(Message* msg, int msg_id, bool ack);
+
+protected:
   RadioDev(uint8_t gateway_id);
 
-  virtual const char* banner() = 0;
-  
-  virtual void init(void);
-  
   typedef enum {
     OK,
     TEST,
   }  LED;
   
-  virtual void set_led(LED idx, bool state) = 0;
+  virtual void set_led(LED idx, bool state){};
 
-  static const uint16_t SLEEP_TIME = 32000;
-
-  void sleep(uint16_t time);
-
-   /*
-    * Build a data Message 
-    */
+  // Build a data Message 
   
   virtual void append_message(Message* msg) = 0;
 
-  void make_message(Message* msg, int msg_id, bool ack);
-
-  virtual void loop(void) = 0;
-
+  // main loop
   void radio_loop(uint16_t time);
+
+public:
+  virtual const char* banner() = 0;
+  virtual void init(void);  
+  virtual void loop(void) = 0;
 };
 
 //  FIN
