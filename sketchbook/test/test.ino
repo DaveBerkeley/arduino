@@ -26,24 +26,14 @@
    *
    */
 
-Port led(2);
-
-static uint16_t ack_id;
-
-#define ACK_WAIT_MS 100
-#define ACK_RETRIES 5
-
-static uint8_t retries;
-
-static Message message(0, GATEWAY_ID);
-static uint32_t wait_until = 0;
-
 // needed by the watchdog code
 EMPTY_INTERRUPT(WDT_vect);
 
  /*
   * IO
   */
+
+Port led(2);
 
 static void ok_led(byte on) 
 {
@@ -59,6 +49,9 @@ static void test_led(byte on)
   *
   */
   
+#define ACK_WAIT_MS 100
+#define ACK_RETRIES 5
+
 class Radio {
 public:
   typedef enum {
@@ -70,8 +63,13 @@ public:
 
   STATE state;
   byte my_node = 0;
+  uint16_t ack_id;
+  uint8_t retries;
+  Message message;
+  uint32_t wait_until = 0;
 
   Radio()
+  : message(0, GATEWAY_ID)
   {
   }
 
