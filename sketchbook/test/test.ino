@@ -110,7 +110,78 @@ public:
    
     append_message(msg);
   }
+  
+  void loop(void)
+  {
+    ok_led(1); // show we are awake
 
+    if (rf12_recvDone() && (rf12_crc == 0)) {
+      Message m((void*) & rf12_data[0]);
+
+      if (m.get_dest() == my_node) {
+        if (m.get_ack()) {
+          // ack the info
+          ack_id = m.get_mid();
+        }
+        else
+        {
+          ack_id = 0;
+          if (state == WAIT_FOR_ACK) {
+            // if we have our ack, go back to sleep
+            if (m.get_admin()) {
+              state = START;
+              test_led(1);
+            } else {
+              if (m.get_mid() == message.get_mid()) {
+                sleep();
+              }
+            }
+          }
+        }
+      }
+    }
+  
+    if (state == START) {
+      Serial.print("hello\r\n");
+      send_text(banner(), ack_id, false);
+      rf12_sendWait(0);
+      ack_id = 0;
+      test_led(0);
+      sleep();
+      return;
+    }
+  
+    if (state == SLEEP) {
+        Serial.println("send");
+        state = SENDING;
+        retries = ACK_RETRIES;
+        make_message(& message, make_mid(), true);      
+        // turn the radio on
+        rf12_sleep(-1);
+        return;
+    }
+  
+    if (state == SENDING) {
+      if (rf12_canSend()) {
+        // report the change
+        send_message(& message);
+        rf12_sendWait(0); // NORMAL when finished
+        state = WAIT_FOR_ACK;
+        wait_until = millis() + ACK_WAIT_MS;
+      }
+      return;
+    }
+  
+    if (state == WAIT_FOR_ACK) {
+      if (millis() > wait_until)
+      {
+          if (--retries)
+              state = SENDING; // try again
+          else
+              sleep();
+      }
+    }
+  }
 };
 
   /*
@@ -183,74 +254,7 @@ void setup()
 
 void loop()
 {
-  ok_led(1); // show we are awake
-
-  if (rf12_recvDone() && (rf12_crc == 0)) {
-    Message m((void*) & rf12_data[0]);
-
-    if (m.get_dest() == radio.my_node) {
-      if (m.get_ack()) {
-        // ack the info
-        ack_id = m.get_mid();
-      }
-      else
-      {
-        ack_id = 0;
-        if (radio.state == Radio::WAIT_FOR_ACK) {
-          // if we have our ack, go back to sleep
-          if (m.get_admin()) {
-            radio.state = Radio::START;
-            test_led(1);
-          } else {
-            if (m.get_mid() == message.get_mid()) {
-              radio.sleep();
-            }
-          }
-        }
-      }
-    }
-  }
-
-  if (radio.state == Radio::START) {
-    Serial.print("hello\r\n");
-    send_text(radio.banner(), ack_id, false);
-    rf12_sendWait(0);
-    ack_id = 0;
-    test_led(0);
-    radio.sleep();
-    return;
-  }
-
-  if (radio.state == Radio::SLEEP) {
-      Serial.println("send");
-      radio.state = Radio::SENDING;
-      retries = ACK_RETRIES;
-      radio.make_message(& message, make_mid(), true);      
-      // turn the radio on
-      rf12_sleep(-1);
-      return;
-  }
-
-  if (radio.state == Radio::SENDING) {
-    if (rf12_canSend()) {
-      // report the change
-      send_message(& message);
-      rf12_sendWait(0); // NORMAL when finished
-      radio.state = Radio::WAIT_FOR_ACK;
-      wait_until = millis() + ACK_WAIT_MS;
-    }
-    return;
-  }
-
-  if (radio.state == Radio::WAIT_FOR_ACK) {
-    if (millis() > wait_until)
-    {
-        if (--retries)
-            radio.state = Radio::SENDING; // try again
-        else
-            radio.sleep();
-    }
-  }
+  radio.loop();
 }
- 
+
 // FIN
