@@ -20,138 +20,140 @@
 
 #include <JeeLib.h>
 
-#include <radionet.h>
+#include <radiodev.h>
 
 // DHT22 code Based on AdaFruit library ...
 
 #include <DHT.h>
 
-#define PIN 4 // DIO Port1 on JeeNode
-// Connect Vdd to 3V3 and GDND to GND
-
-#define DHT_TYPE DHT22
-
-DHT dht(PIN, DHT_TYPE);
-
-static const char* banner = "Humidity Device v1.0";
-
-// node -> gateway data
-#define PRESENT_TEMPERATURE (1 << 1)
-#define PRESENT_HUMIDITY (1 << 2)
-
-Port led(2);
-
-static uint16_t ack_id;
-static byte my_node = 0;
-
-typedef enum {
-  START=0,
-  SLEEP,
-  SENDING,
-  WAIT_FOR_ACK,
-} STATE;
-
-static STATE state;
-
-#define ACK_WAIT_MS 100
-#define ACK_RETRIES 5
-
-static uint8_t retries;
-
-static Message message(0, GATEWAY_ID);
-static uint32_t wait_until = 0;
-
 // needed by the watchdog code
 EMPTY_INTERRUPT(WDT_vect);
 
- /*
-  * IO
+  /*
+  *  Read Vcc using the 1.1V reference.
+  *
+  *  from :
+  *
+  *  https://code.google.com/p/tinkerit/wiki/SecretVoltmeter
   */
 
-static void ok_led(byte on) 
-{
-  led.digiWrite(on);
-}
-
-static void test_led(byte on) 
-{
-  led.digiWrite2(!on);
+long read_vcc() {
+  long result;
+  // Read 1.1V reference against AVcc
+  ADMUX = _BV(REFS0) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1);
+  delay(2); // Wait for Vref to settle
+  ADCSRA |= _BV(ADSC); // Convert
+  while (bit_is_set(ADCSRA,ADSC))
+    ;
+  result = ADCL;
+  result |= ADCH<<8;
+  result = 1126400L / result; // Back-calculate AVcc in mV
+  return result;
 }
 
  /*
   *  Temperature / Humidity
   */
 
-static int get_temperature() {
-  float t = dht.readTemperature();
-  return int(t * 100);
-}
+#define PIN 4 // DIO Port1 on JeeNode
+// Connect Vdd to 3V3 and GDND to GND
 
-static int get_humidity() {
-  float h = dht.readHumidity();
-  return int(h * 100);
-}
+#define DHT_TYPE DHT22
 
- /*
-  * Fall into a deep sleep
-  */
+// node -> gateway data
+#define PRESENT_TEMPERATURE (1 << 1)
+#define PRESENT_HUMIDITY (1 << 2)
+#define PRESENT_VCC (1 << 3)
 
-static uint16_t sleep_count = 0;
-
-#define SLEEP_TIME (32000)
-static const int LONG_WAIT = 1;
-
-static void sleep(uint16_t time=SLEEP_TIME)
+class HumidityDev : public RadioDev
 {
-  //rx_led(0);
-  //tx_led(0);
-  ok_led(0);
-  rf12_sleep(0); // turn the radio off
-  state = SLEEP;
-  //Serial.flush(); // wait for output to complete
-  Sleepy::loseSomeTime(time);
-}
+private:
+  Port led;
+  DHT dht;
 
- /*
-  * Build a data Message 
-  */
+  void ok_led(byte on) 
+  {
+    led.digiWrite(on);
+  }
 
-void make_message(Message* msg, int msg_id, bool ack) 
-{
-  msg->reset();
-  msg->set_dest(GATEWAY_ID);
-  msg->set_mid(msg_id);
-  if (ack)
-    msg->set_ack();
+  void test_led(byte on) 
+  {
+    led.digiWrite2(!on);
+  }
 
-  const uint16_t t = get_temperature();
-  msg->append(PRESENT_TEMPERATURE, & t, sizeof(t));
-  const uint16_t h = get_humidity();
-  msg->append(PRESENT_HUMIDITY, & h, sizeof(h));
-}
+  int get_temperature() {
+    float t = dht.readTemperature();
+    return int(t * 100);
+  }
+
+  int get_humidity() {
+    float h = dht.readHumidity();
+    return int(h * 100);
+  }
+
+public:
+  HumidityDev(uint8_t gateway_id)
+  : RadioDev(gateway_id),
+    led(2),
+    dht(PIN, DHT_TYPE)
+  {
+  }  
+
+  virtual void init()
+  {
+    ok_led(0);
+    test_led(0);
+  
+    led.mode(OUTPUT);  
+    led.mode2(OUTPUT);  
+
+    dht.begin();
+
+    RadioDev::init();
+  }
+
+  virtual const char* banner()
+  {
+    return "Humidity Device v1.0";
+  }
+  
+  virtual void loop()
+  {
+    radio_loop(32000);
+  }
+
+private:
+  virtual void append_message(Message* msg)
+  {
+    const uint16_t t = get_temperature();
+    msg->append(PRESENT_TEMPERATURE, & t, sizeof(t));
+    const uint16_t h = get_humidity();
+    msg->append(PRESENT_HUMIDITY, & h, sizeof(h));
+    const uint16_t vcc = read_vcc();
+    msg->append(PRESENT_VCC, & vcc, sizeof(vcc));
+  }
+  
+  virtual void set_led(LED idx, bool on)
+  {
+    switch (idx) {
+      case OK  :  ok_led(on);    break;
+      case TEST:  test_led(on);  break;
+    }
+  }
+};
+
+static HumidityDev radio(GATEWAY_ID);
 
  /*
   *
   */
 
-#define IRQ 1
-  
 void setup() 
 {
-  ok_led(0);
-  test_led(0);
-  
-  led.mode(OUTPUT);  
-  led.mode2(OUTPUT);  
-
-  dht.begin();
-
   Serial.begin(57600);
-  Serial.println(banner);
+  Serial.println(radio.banner());
 
-  my_node = rf12_configSilent();
-
-  state = START;
+  radio.init();
 }
 
  /*
@@ -160,79 +162,7 @@ void setup()
 
 void loop()
 {
-  static uint16_t changes = 0;
-  
-  ok_led(1); // show we are awake
-
-  if (rf12_recvDone() && (rf12_crc == 0)) {
-    Message m((void*) & rf12_data[0]);
-
-    if (m.get_dest() == my_node) {
-      if (m.get_ack()) {
-        // ack the info
-        ack_id = m.get_mid();
-      }
-      else
-      {
-        ack_id = 0;
-        if (state == WAIT_FOR_ACK) {
-          // if we have our ack, go back to sleep
-          if (m.get_admin()) {
-            state = START;
-            test_led(1);
-          } else {
-            if (m.get_mid() == message.get_mid()) {
-              sleep();
-            }
-          }
-        }
-      }
-    }
-  }
-
-  if (state == START) {
-    Serial.print("hello\r\n");
-    send_text(banner, ack_id, false);
-    rf12_sendWait(0);
-    sleep_count = 0;
-    ack_id = 0;
-    test_led(0);
-    sleep();
-    return;
-  }
-
-  if (state == SLEEP) {
-      Serial.println("send");
-      //last_changes = changes;
-      state = SENDING;
-      retries = ACK_RETRIES;
-      sleep_count = 0;
-      make_message(& message, make_mid(), true);      
-      // turn the radio on
-      rf12_sleep(-1);
-      return;
-  }
-
-  if (state == SENDING) {
-    if (rf12_canSend()) {
-      // report the change
-      send_message(& message);
-      rf12_sendWait(0); // NORMAL when finished
-      state = WAIT_FOR_ACK;
-      wait_until = millis() + ACK_WAIT_MS;
-    }
-    return;
-  }
-
-  if (state == WAIT_FOR_ACK) {
-    if (millis() > wait_until)
-    {
-        if (--retries)
-            state = SENDING; // try again
-        else
-            sleep();
-    }
-  }
+  radio.loop();
 }
 
 // FIN
