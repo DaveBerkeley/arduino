@@ -35,8 +35,10 @@ protected:
   virtual void set_led(LED idx, bool state){};
 
   // Build a data Message 
-  
   virtual void append_message(Message* msg) = 0;
+
+  // Rx a message
+  virtual void on_message(const Message* msg) { }
 
   // main loop
   void radio_loop(uint16_t time);

@@ -54,6 +54,7 @@ void RadioDev::radio_loop(uint16_t time)
     Message m((void*) & rf12_data[0]);
 
     if (m.get_dest() == my_node) {
+      on_message(& m);
       if (m.get_ack()) {
         // ack the info
         ack_id = m.get_mid();
