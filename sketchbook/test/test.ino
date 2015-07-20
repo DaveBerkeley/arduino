@@ -29,12 +29,35 @@
 // needed by the watchdog code
 EMPTY_INTERRUPT(WDT_vect);
 
- /*
-  *  Temperature 
+  /*
+  *  Read Vcc using the 1.1V reference.
+  *
+  *  from :
+  *
+  *  https://code.google.com/p/tinkerit/wiki/SecretVoltmeter
   */
 
+long read_vcc() {
+  long result;
+  // Read 1.1V reference against AVcc
+  ADMUX = _BV(REFS0) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1);
+  delay(2); // Wait for Vref to settle
+  ADCSRA |= _BV(ADSC); // Convert
+  while (bit_is_set(ADCSRA,ADSC))
+    ;
+  result = ADCL;
+  result |= ADCH<<8;
+  result = 1126400L / result; // Back-calculate AVcc in mV
+  return result;
+}
+
+  /*
+  *
+  */
+  
 // node -> gateway data
 #define PRESENT_TEMPERATURE (1 << 1)
+#define PRESENT_VCC (1 << 2)
 
 #define TEMPERATURE_PIN 0
 
@@ -91,6 +114,8 @@ public:
   {
     const uint16_t t = get_temperature(TEMPERATURE_PIN);
     msg->append(PRESENT_TEMPERATURE, & t, sizeof(t));
+    const uint16_t vcc = read_vcc();
+    msg->append(PRESENT_VCC, & vcc, sizeof(vcc));
   }
 
   virtual void set_led(LED idx, bool state)
