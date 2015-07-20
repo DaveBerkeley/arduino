@@ -40,6 +40,7 @@ EMPTY_INTERRUPT(WDT_vect);
 long read_vcc() {
   long result;
   // Read 1.1V reference against AVcc
+  const uint16_t mux = ADMUX;
   ADMUX = _BV(REFS0) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1);
   delay(2); // Wait for Vref to settle
   ADCSRA |= _BV(ADSC); // Convert
@@ -48,6 +49,7 @@ long read_vcc() {
   result = ADCL;
   result |= ADCH<<8;
   result = 1126400L / result; // Back-calculate AVcc in mV
+  ADMUX = mux; // restore mux setting
   return result;
 }
 
