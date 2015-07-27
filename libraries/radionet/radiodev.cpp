@@ -9,9 +9,11 @@
   *
   */
 
-RadioDev::RadioDev(uint8_t gateway_id)
+RadioDev::RadioDev(uint8_t gateway_id, uint16_t sleeps)
 : message(0, gateway_id),
-  gateway_id(gateway_id)
+  gateway_id(gateway_id),
+  nsleep(sleeps),
+  sleep_count(0)
 {
 }
 
@@ -26,6 +28,11 @@ void RadioDev::sleep(uint16_t time)
   set_led(OK, 0);
   set_led(TEST, 0);
   rf12_sleep(0); // turn the radio off
+
+  if (state != SLEEP) {
+      sleep_count = nsleep;
+  }
+
   state = SLEEP;
   //Serial.flush(); // wait for output to complete
   Sleepy::loseSomeTime(time);
@@ -63,12 +70,12 @@ void RadioDev::radio_loop(uint16_t time)
       {
         ack_id = 0;
         if (state == WAIT_FOR_ACK) {
-          // if we have our ack, go back to sleep
           if (m.get_admin()) {
             state = START;
             set_led(TEST, 1);
           } else {
             if (m.get_mid() == message.get_mid()) {
+              // if we have our ack, go back to sleep
               sleep(time);
             }
           }
@@ -89,6 +96,15 @@ void RadioDev::radio_loop(uint16_t time)
 
   if (state == SLEEP) {
       //Serial.println("send");
+
+      if (sleep_count) {
+          sleep_count -= 1;
+          if (sleep_count != 0) {
+              sleep(time);
+              return;
+          }
+      }
+
       state = SENDING;
       retries = ACK_RETRIES;
       make_message(& message, make_mid(), true);      

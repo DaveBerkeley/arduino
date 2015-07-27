@@ -87,8 +87,8 @@ class TestRadio : public RadioDev
 
 public:
 
-  TestRadio(uint8_t gateway_id)
-  : RadioDev(gateway_id),
+  TestRadio()
+  : RadioDev(GATEWAY_ID),
     led(2)
   {
   }
@@ -130,11 +130,11 @@ public:
   
   virtual void loop(void)
   {
-    radio_loop(32000);
+    radio_loop(32767);
   }
 };
 
-static TestRadio radio(GATEWAY_ID);
+static TestRadio radio;
 
  /*
   *

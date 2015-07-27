@@ -17,6 +17,8 @@ private:
   Message message;
   uint32_t wait_until = 0;
   uint8_t gateway_id;
+  uint16_t nsleep;
+  uint16_t sleep_count;
 
   static const int ACK_WAIT_MS = 100;
   static const int ACK_RETRIES = 5;
@@ -25,7 +27,7 @@ private:
   void make_message(Message* msg, int msg_id, bool ack);
 
 protected:
-  RadioDev(uint8_t gateway_id);
+  RadioDev(uint8_t gateway_id, uint16_t sleeps=1);
 
   typedef enum {
     OK,
