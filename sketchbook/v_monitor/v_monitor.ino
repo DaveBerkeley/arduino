@@ -38,8 +38,8 @@ EMPTY_INTERRUPT(WDT_vect);
   */
   
 // Data wire is plugged into port 2 on the Arduino
-#define ONE_WIRE_BUS 4
-#define PULLUP_PIN A0
+#define ONE_WIRE_BUS 4 // jeenode port 1 digital pin
+#define PULLUP_PIN A0  // jeenode port 1 analog pin
 
 // Setup a oneWire instance to communicate with any OneWire devices (not just Maxim/Dallas temperature ICs)
 OneWire oneWire(ONE_WIRE_BUS);
@@ -66,36 +66,21 @@ static int get_voltage(int pin) {
   return int(v * 1000);
 }
 
+  /*
+  *
+  */
+
 class VoltageMonitorRadio : public RadioDev
 {
-  Port led;
-
-  void ok_led(byte on) 
-  {
-    led.digiWrite(on);
-  }
-
-  void test_led(byte on) 
-  {
-    led.digiWrite2(!on);
-  }
-
 public:
 
   VoltageMonitorRadio()
-  : RadioDev(GATEWAY_ID),
-    led(2)
+  : RadioDev(GATEWAY_ID, 7)
   {
   }
 
   virtual void init()
   {
-    ok_led(0);
-    test_led(0);
-
-    led.mode(OUTPUT);  
-    led.mode2(OUTPUT);  
-
     RadioDev::init();
 
     // use the 1.1V internal ref for the ADC
@@ -124,14 +109,6 @@ public:
     msg->append(PRESENT_VCC, & vcc, sizeof(vcc));
   }
 
-  virtual void set_led(LED idx, bool state)
-  {
-    switch (idx) {
-      case   OK   :  ok_led(state);  break;
-      case   TEST :  test_led(state);  break;
-    }
-  }
-  
   virtual void loop(void)
   {
     radio_loop(32767);
