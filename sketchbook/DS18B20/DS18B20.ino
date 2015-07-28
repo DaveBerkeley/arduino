@@ -8,6 +8,7 @@
 
 // Data wire is plugged into port 2 on the Arduino
 #define ONE_WIRE_BUS 2
+#define PULLUP_PIN 3
 
 // Setup a oneWire instance to communicate with any OneWire devices (not just Maxim/Dallas temperature ICs)
 OneWire oneWire(ONE_WIRE_BUS);
@@ -23,6 +24,8 @@ void setup(void)
 
   // Start up the library
   sensors.begin();
+  
+  pinMode(PULLUP_PIN INPUT_PULLUP);
 }
 
 void loop(void)
@@ -34,6 +37,7 @@ void loop(void)
   Serial.println("DONE");
   
   Serial.print("Temperature for the device 1 (index 0) is: ");
-  Serial.println(sensors.getTempCByIndex(0));  
+  Serial.println(sensors.getTempCByIndex(0));
+  delay(100);
 }
 
