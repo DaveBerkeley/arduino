@@ -59,9 +59,11 @@ long read_vcc() {
   
 // node -> gateway data
 #define PRESENT_TEMPERATURE (1 << 1)
-#define PRESENT_VCC (1 << 2)
+#define PRESENT_VOLTAGE (1 << 2)
+#define PRESENT_VCC (1 << 3)
 
 #define TEMPERATURE_PIN 0
+#define VOLTAGE_PIN 1
 
 static const float temp_scale = (1.1 * 100) / 1024;
 
@@ -71,7 +73,15 @@ static int get_temperature(int pin) {
   return int(t * 100);
 }
 
-class TestRadio : public RadioDev
+static const float v_scale = (1.1 * 1000) / 1024;
+
+static int get_voltage(int pin) {
+  uint16_t analog = analogRead(pin);
+  const float v = v_scale * analog;
+  return int(v * 1000);
+}
+
+class VoltageMonitorRadio : public RadioDev
 {
   Port led;
 
@@ -109,13 +119,15 @@ public:
 
   virtual const char* banner()
   {
-    return "Test Device v1.0";
+    return "Voltage Monitor v1.0";
   }
 
   virtual void append_message(Message* msg)
   {
     const uint16_t t = get_temperature(TEMPERATURE_PIN);
     msg->append(PRESENT_TEMPERATURE, & t, sizeof(t));
+    const uint16_t v = get_voltage(VOLTAGE_PIN;
+    msg->append(PRESENT_VOLTAGE, & v, sizeof(v));
     const uint16_t vcc = read_vcc();
     msg->append(PRESENT_VCC, & vcc, sizeof(vcc));
   }
@@ -134,7 +146,7 @@ public:
   }
 };
 
-static TestRadio radio;
+static VoltageMonitorRadio radio;
 
  /*
   *
