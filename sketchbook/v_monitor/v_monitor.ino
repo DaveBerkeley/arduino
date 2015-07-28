@@ -21,6 +21,7 @@
 #include <JeeLib.h>
 
 #include <radiodev.h>
+#include <radioutils.h>
 
   /*
    *
@@ -28,30 +29,6 @@
 
 // needed by the watchdog code
 EMPTY_INTERRUPT(WDT_vect);
-
-  /*
-  *  Read Vcc using the 1.1V reference.
-  *
-  *  from :
-  *
-  *  https://code.google.com/p/tinkerit/wiki/SecretVoltmeter
-  */
-
-long read_vcc() {
-  long result;
-  // Read 1.1V reference against AVcc
-  const uint16_t mux = ADMUX;
-  ADMUX = _BV(REFS0) | _BV(MUX3) | _BV(MUX2) | _BV(MUX1);
-  delay(2); // Wait for Vref to settle
-  ADCSRA |= _BV(ADSC); // Convert
-  while (bit_is_set(ADCSRA,ADSC))
-    ;
-  result = ADCL;
-  result |= ADCH<<8;
-  result = 1126400L / result; // Back-calculate AVcc in mV
-  ADMUX = mux; // restore mux setting
-  return result;
-}
 
   /*
   *
@@ -97,7 +74,7 @@ class VoltageMonitorRadio : public RadioDev
 
 public:
 
-  TestRadio()
+  VoltageMonitorRadio()
   : RadioDev(GATEWAY_ID),
     led(2)
   {
@@ -126,7 +103,7 @@ public:
   {
     const uint16_t t = get_temperature(TEMPERATURE_PIN);
     msg->append(PRESENT_TEMPERATURE, & t, sizeof(t));
-    const uint16_t v = get_voltage(VOLTAGE_PIN;
+    const uint16_t v = get_voltage(VOLTAGE_PIN);
     msg->append(PRESENT_VOLTAGE, & v, sizeof(v));
     const uint16_t vcc = read_vcc();
     msg->append(PRESENT_VCC, & vcc, sizeof(vcc));
