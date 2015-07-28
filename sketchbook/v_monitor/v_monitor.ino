@@ -23,6 +23,9 @@
 #include <radiodev.h>
 #include <radioutils.h>
 
+#include <OneWire.h>
+#include <DallasTemperature.h>
+
   /*
    *
    */
@@ -34,21 +37,26 @@ EMPTY_INTERRUPT(WDT_vect);
   *
   */
   
+// Data wire is plugged into port 2 on the Arduino
+#define ONE_WIRE_BUS 4
+#define PULLUP_PIN A0
+
+// Setup a oneWire instance to communicate with any OneWire devices (not just Maxim/Dallas temperature ICs)
+OneWire oneWire(ONE_WIRE_BUS);
+
+// Pass our oneWire reference to Dallas Temperature. 
+DallasTemperature sensors(&oneWire);
+
+  /*
+  *
+  */  
+
 // node -> gateway data
 #define PRESENT_TEMPERATURE (1 << 1)
 #define PRESENT_VOLTAGE (1 << 2)
 #define PRESENT_VCC (1 << 3)
 
-#define TEMPERATURE_PIN 0
 #define VOLTAGE_PIN 1
-
-static const float temp_scale = (1.1 * 100) / 1024;
-
-static int get_temperature(int pin) {
-  uint16_t analog = analogRead(pin);
-  const float t = temp_scale * analog;
-  return int(t * 100);
-}
 
 static const float v_scale = (1.1 * 1000) / 1024;
 
@@ -92,6 +100,9 @@ public:
 
     // use the 1.1V internal ref for the ADC
     analogReference(INTERNAL);
+    
+    pinMode(PULLUP_PIN, INPUT_PULLUP);
+    sensors.begin();
   }
 
   virtual const char* banner()
@@ -101,10 +112,14 @@ public:
 
   virtual void append_message(Message* msg)
   {
-    const uint16_t t = get_temperature(TEMPERATURE_PIN);
+    sensors.requestTemperatures(); // Send the command to get temperatures
+    const float ft = sensors.getTempCByIndex(0);
+    const uint16_t t = int(ft * 100);
     msg->append(PRESENT_TEMPERATURE, & t, sizeof(t));
+
     const uint16_t v = get_voltage(VOLTAGE_PIN);
     msg->append(PRESENT_VOLTAGE, & v, sizeof(v));
+
     const uint16_t vcc = read_vcc();
     msg->append(PRESENT_VCC, & vcc, sizeof(vcc));
   }
@@ -131,7 +146,7 @@ static VoltageMonitorRadio radio;
   
 void setup() 
 {
-  Serial.begin(57600);
+  Serial.begin(9600);
   Serial.println(radio.banner());
 
   radio.init();
