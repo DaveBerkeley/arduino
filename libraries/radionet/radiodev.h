@@ -26,14 +26,16 @@ private:
   void sleep(uint16_t time);
   void make_message(Message* msg, int msg_id, bool ack);
 
-protected:
-  RadioDev(uint8_t gateway_id, uint16_t sleeps=1);
+public:
 
   typedef enum {
     OK,
     TEST,
   }  LED;
   
+protected:
+  RadioDev(uint8_t gateway_id, uint16_t sleeps=1);
+
   virtual void set_led(LED idx, bool state){};
 
   // Build a data Message 

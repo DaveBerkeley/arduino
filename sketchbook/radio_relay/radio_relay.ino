@@ -53,25 +53,86 @@ DallasTemperature sensors(&oneWire);
 
 // node -> gateway data
 #define PRESENT_TEMPERATURE (1 << 1)
-#define PRESENT_VOLTAGE (1 << 2)
+#define PRESENT_STATE (1 << 2)
 #define PRESENT_VCC (1 << 3)
 
-#define VOLTAGE_PIN 1
-
-static const float v_scale = (1.1 * 1000) / 1024;
-
-static int get_voltage(int pin) {
-  uint16_t analog = analogRead(pin);
-  const float v = v_scale * analog;
-  return int(v * 1000);
-}
-
   /*
-  *
+  *  LED handling
   */
   
 #define OK_LED 6
 #define TEST_LED 7
+
+class Pin
+{
+  int m_pin;
+  RadioDev::LED m_led;
+  uint16_t  m_count;
+public:
+  Pin(int pin, RadioDev::LED led)
+  : m_pin(pin),
+    m_led(led),
+    m_count(0)
+  {
+  }
+  
+  bool match(RadioDev::LED led)
+  {
+    return led == m_led;
+  }
+  
+  void init()
+  {
+    pinMode(m_pin, OUTPUT);
+    set(0);
+  }
+  
+  void set(uint16_t count)
+  {
+    m_count = count;
+    digitalWrite(m_pin, count ? LOW : HIGH);
+  }
+  
+  void poll()
+  {
+    if (m_count) {
+      if (!--m_count) {
+        set(0);
+      }
+    }
+  }
+};
+
+#define NPINS 2
+
+static Pin pins[NPINS] = {
+  Pin(OK_LED, RadioDev::OK),
+  Pin(TEST_LED, RadioDev::TEST),
+};
+
+static void set_led(RadioDev::LED led, bool state)
+{
+  for (int p = 0; p < NPINS; ++p) {
+    if (pins[p].match(led)) {
+      pins[p].set(state ? 1000 : 0);
+      return;
+    }
+  }
+}
+
+static void poll_leds()
+{
+  for (int p = 0; p < NPINS; ++p) {
+    pins[p].poll();
+  }
+}
+
+static void init_leds()
+{
+  for (int p = 0; p < NPINS; ++p) {
+    pins[p].init();
+  }
+}
 
   /*
   *
@@ -79,8 +140,6 @@ static int get_voltage(int pin) {
 
 class RadioRelay : public RadioDev
 {
-
-  uint8_t leds[2];  
 public:
 
   RadioRelay()
@@ -98,10 +157,7 @@ public:
     pinMode(PULLUP_PIN, INPUT_PULLUP);
     sensors.begin();
     
-    pinMode(OK_LED, OUTPUT);
-    pinMode(TEST_LED, OUTPUT);
-    set_led(OK, 0);
-    set_led(TEST, 0);
+    init_leds();
   }
 
   virtual const char* banner()
@@ -115,9 +171,8 @@ public:
     const float ft = sensors.getTempCByIndex(0);
     const uint16_t t = int(ft * 100);
     msg->append(PRESENT_TEMPERATURE, & t, sizeof(t));
-
-    const uint16_t v = get_voltage(VOLTAGE_PIN);
-    msg->append(PRESENT_VOLTAGE, & v, sizeof(v));
+    
+    // TODO : append relay state
 
     const uint16_t vcc = read_vcc();
     msg->append(PRESENT_VCC, & vcc, sizeof(vcc));
@@ -126,21 +181,7 @@ public:
   virtual void loop(void)
   {
     radio_poll();
-    
-    for (int i = 0; i < (sizeof(leds)/sizeof(leds[0])); ++i)
-    {
-      if (leds[i]) {
-        if (!--leds[i]) {
-          int p = 0;
-          switch (i) {
-            case 0 : p = TEST_LED;  break;
-            case 1 : p = OK_LED;  break;
-            default : continue;
-          }
-          digitalWrite(p, HIGH);
-        }
-      }      
-    }
+    poll_leds();
   }
 
   virtual void on_message(const Message* msg)
@@ -154,18 +195,8 @@ public:
 
   virtual void set_led(LED idx, bool state)
   {
-    switch (idx) {
-      case TEST : 
-        leds[0] = state ? 5 : 0;
-        digitalWrite(TEST_LED, state ? LOW : HIGH);  
-        break;
-      case OK : 
-        leds[1] = state ? 5 : 0;
-        digitalWrite(OK_LED, state ? LOW : HIGH);  
-        break;
-    }
-  }  
-
+    ::set_led(idx, state);
+  }
 };
 
 static RadioRelay radio;
@@ -190,7 +221,7 @@ void setup()
 void loop()
 {
   radio.loop();
-  delay(10);
+  //delay(10);
 }
 
 // FIN
