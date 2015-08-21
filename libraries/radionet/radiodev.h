@@ -5,7 +5,8 @@ class RadioDev {
 private:
   typedef enum {
     START=0,
-    SLEEP,
+    SLEEP,  // for sleepy nodes
+    LISTEN, // for awake nodes
     SENDING,
     WAIT_FOR_ACK,
   } STATE;

@@ -67,7 +67,7 @@ class Pin
 {
   int m_pin;
   RadioDev::LED m_led;
-  uint16_t  m_count;
+  int16_t  m_count;
 public:
   Pin(int pin, RadioDev::LED led)
   : m_pin(pin),
@@ -87,15 +87,15 @@ public:
     set(0);
   }
   
-  void set(uint16_t count)
+  void set(int16_t count)
   {
     m_count = count;
-    digitalWrite(m_pin, count ? LOW : HIGH);
+    digitalWrite(m_pin, (count > 0) ? LOW : HIGH);
   }
   
   void poll()
   {
-    if (m_count) {
+    if (m_count > 0) {
       if (!--m_count) {
         set(0);
       }
@@ -173,6 +173,8 @@ public:
     msg->append(PRESENT_TEMPERATURE, & t, sizeof(t));
     
     // TODO : append relay state
+    const uint8_t relay_state = 0;
+    msg->append(PRESENT_STATE, & relay_state, sizeof(relay_state));
 
     const uint16_t vcc = read_vcc();
     msg->append(PRESENT_VCC, & vcc, sizeof(vcc));
@@ -188,8 +190,11 @@ public:
   {
     set_led(OK, true);
     const uint8_t d = msg->get_dest();
+    const uint8_t a = msg->get_admin();
     Serial.print("on message ");
     Serial.print(d);
+    Serial.print(" ");
+    Serial.print(a);
     Serial.print("\n");
   }
 
@@ -221,7 +226,6 @@ void setup()
 void loop()
 {
   radio.loop();
-  //delay(10);
 }
 
 // FIN

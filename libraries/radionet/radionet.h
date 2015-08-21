@@ -86,7 +86,7 @@ public:
     m_msg.m_hdr.m_flags = ACK;
   }
 
-  bool get_admin()
+  bool get_admin() const
   {
     return m_msg.m_hdr.m_flags & ADMIN;
   }
@@ -96,7 +96,7 @@ public:
     m_msg.m_hdr.m_flags = ADMIN;
   }
 
-  uint16_t get_flags()
+  uint16_t get_flags() const
   {
     return m_msg.m_hdr.m_flags;
   }
