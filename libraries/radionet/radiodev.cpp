@@ -136,4 +136,43 @@ void RadioDev::radio_loop(uint16_t time)
   }
 }
 
+void RadioDev::power_on()
+{
+  // turn the radio on
+  rf12_sleep(-1);
+}
+
+void RadioDev::radio_poll()
+{
+
+  if (rf12_recvDone() && (rf12_crc == 0)) {
+    Message m((void*) & rf12_data[0]);
+
+on_message(& m);
+    /*
+    if (m.get_dest() == my_node) {
+      on_message(& m);
+      if (m.get_ack()) {
+        // ack the info
+        ack_id = m.get_mid();
+      }
+      else
+      {
+        ack_id = 0;
+        if (state == WAIT_FOR_ACK) {
+          if (m.get_admin()) {
+            state = START;
+            set_led(TEST, 1);
+          } else {
+            if (m.get_mid() == message.get_mid()) {
+              // if we have our ack, go back to sleep
+            }
+          }
+        }
+      }
+    }
+    */
+  }
+}
+
 // FIN

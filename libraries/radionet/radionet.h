@@ -56,7 +56,7 @@ public:
     m_size = 0;
   }
 
-  uint8_t get_dest()
+  uint8_t get_dest() const
   {
     return m_msg.m_hdr.m_dest;
   }

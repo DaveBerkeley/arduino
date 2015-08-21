@@ -45,10 +45,15 @@ protected:
   // main loop
   void radio_loop(uint16_t time);
 
+  // poll loop
+  void radio_poll();
+
 public:
   virtual const char* banner() = 0;
   virtual void init(void);  
   virtual void loop(void) = 0;
+
+  void power_on();
 };
 
 //  FIN
