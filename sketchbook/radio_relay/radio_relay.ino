@@ -140,10 +140,12 @@ static void init_leds()
 
 class RadioRelay : public RadioDev
 {
+  bool m_on;
 public:
 
   RadioRelay()
-  : RadioDev(GATEWAY_ID, 7)
+  : RadioDev(GATEWAY_ID, 0),
+    m_on(false)
   {
   }
 
@@ -172,9 +174,8 @@ public:
     const uint16_t t = int(ft * 100);
     msg->append(PRESENT_TEMPERATURE, & t, sizeof(t));
     
-    // TODO : append relay state
-    const uint8_t relay_state = 0;
-    msg->append(PRESENT_STATE, & relay_state, sizeof(relay_state));
+    // append relay state
+    msg->append(PRESENT_STATE, & m_on, sizeof(m_on));
 
     const uint16_t vcc = read_vcc();
     msg->append(PRESENT_VCC, & vcc, sizeof(vcc));
@@ -186,16 +187,26 @@ public:
     poll_leds();
   }
 
-  virtual void on_message(const Message* msg)
+  virtual void on_message(Message* msg)
   {
     set_led(OK, true);
-    const uint8_t d = msg->get_dest();
     const uint8_t a = msg->get_admin();
+    const uint8_t f = msg->get_flags();
     Serial.print("on message ");
-    Serial.print(d);
-    Serial.print(" ");
     Serial.print(a);
+    Serial.print(" ");
+    Serial.print(f);
     Serial.print("\n");
+    
+    bool r;
+    if (msg->extract(PRESENT_STATE, & r, sizeof(r)))
+    {
+      m_on = r;
+      Serial.print("set relay ");
+      Serial.print(r);
+      Serial.print("\n");
+      set_led(TEST, r);
+    }
   }
 
   virtual void set_led(LED idx, bool state)
@@ -212,7 +223,7 @@ static RadioRelay radio;
   
 void setup() 
 {
-  Serial.begin(9600);
+  Serial.begin(57600);
   Serial.println(radio.banner());
 
   radio.init();
@@ -226,6 +237,16 @@ void setup()
 void loop()
 {
   radio.loop();
+  
+  static uint32_t count = 500000;
+  
+  if (count) {
+    if (!--count) {
+      count = 500000;
+      Serial.print("req tx\n");
+      radio.req_tx_message();
+    }
+  }
 }
 
 // FIN

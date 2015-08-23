@@ -66,7 +66,7 @@ public:
     m_msg.m_hdr.m_dest = dest;
   }
 
-  uint16_t get_mid()
+  uint16_t get_mid() const
   {
     return m_msg.m_hdr.m_id;
   }
@@ -76,7 +76,7 @@ public:
     m_msg.m_hdr.m_id = mid;
   }
 
-  bool get_ack()
+  bool get_ack() const
   {
     return m_msg.m_hdr.m_flags & ACK;
   }
@@ -109,7 +109,7 @@ public:
     m_msg.m_hdr.m_flags |= mask;
   }
 
-  bool extract(int mask, void* data, int size)
+  bool extract(int mask, void* data, int size) 
   {
     if (!(m_msg.m_hdr.m_flags & mask))
       return false;
@@ -118,7 +118,7 @@ public:
     return true;
   }
 
-  int size()
+  int size() const
   {
     return sizeof(header) + m_size;
   }

@@ -43,7 +43,7 @@ protected:
   virtual void append_message(Message* msg) = 0;
 
   // Rx a message
-  virtual void on_message(const Message* msg) { }
+  virtual void on_message(Message* msg) { }
 
   // main loop
   void radio_loop(uint16_t time);
@@ -57,6 +57,7 @@ public:
   virtual void loop(void) = 0;
 
   void power_on();
+  void req_tx_message();
 };
 
 //  FIN

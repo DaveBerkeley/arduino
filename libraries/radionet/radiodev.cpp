@@ -22,7 +22,7 @@ void RadioDev::init(void)
   my_node = rf12_configSilent();
   state = START;
 }
-  
+
 void RadioDev::sleep(uint16_t time)
 {
   set_led(OK, 0);
@@ -147,16 +147,17 @@ void RadioDev::radio_poll()
   if (rf12_recvDone() && (rf12_crc == 0)) {
     Message m((void*) & rf12_data[0]);
 
-    set_led(OK, 1); // show we are awake
     if (m.get_dest() == my_node) {
       on_message(& m);
       if (m.get_ack()) {
-        // ack the info
-        ack_id = m.get_mid();
+        // ack the message : probably a poll from the gateway
+        const uint8_t ack = m.get_mid();
+        state = SENDING;
+        retries = ACK_RETRIES;
+        make_message(& message, ack, false);
       }
       else
       {
-        ack_id = 0;
         if (state == WAIT_FOR_ACK) {
           if (m.get_admin()) {
             state = START;
@@ -173,7 +174,7 @@ void RadioDev::radio_poll()
   }
 
   if (state == START) {
-    //Serial.print("hello\r\n");
+    Serial.print("hello\r\n");
     send_text(banner(), ack_id, false);
     rf12_sendWait(0);
     ack_id = 0;
@@ -181,19 +182,8 @@ void RadioDev::radio_poll()
     return;
   }
 
-  if (state == SLEEP) {
-      //Serial.println("send");
-
-      state = SENDING;
-      retries = ACK_RETRIES;
-      make_message(& message, make_mid(), true);      
-      // turn the radio on
-      rf12_sleep(-1);
-      return;
-  }
-
   if (state == LISTEN) {
-      //Serial.print("listen\n");
+      // no-op state
   }
 
   if (state == SENDING) {
@@ -217,6 +207,13 @@ void RadioDev::radio_poll()
       }
     }
   }
+}
+
+void RadioDev::req_tx_message()
+{
+  state = SENDING;
+  retries = ACK_RETRIES;
+  make_message(& message, make_mid(), true);      
 }
 
 // FIN
