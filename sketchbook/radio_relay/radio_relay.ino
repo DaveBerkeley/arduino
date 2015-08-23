@@ -62,6 +62,7 @@ DallasTemperature sensors(&oneWire);
   
 #define OK_LED 6
 #define TEST_LED 7
+#define RELAY 9
 
 class Pin
 {
@@ -148,10 +149,17 @@ public:
     m_on(false)
   {
   }
+  
+  void set_relay(bool state)
+  {
+    m_on = state;
+    digitalWrite(RELAY, state ? LOW : HIGH);
+  }
 
   virtual void init()
   {
     RadioDev::init();
+    pinMode(RELAY, OUTPUT);
 
     // use the 1.1V internal ref for the ADC
     analogReference(INTERNAL);
@@ -160,6 +168,7 @@ public:
     sensors.begin();
     
     init_leds();
+    set_relay(0);
   }
 
   virtual const char* banner()
@@ -201,11 +210,10 @@ public:
     bool r;
     if (msg->extract(PRESENT_STATE, & r, sizeof(r)))
     {
-      m_on = r;
+      set_relay(r);
       Serial.print("set relay ");
       Serial.print(r);
       Serial.print("\n");
-      set_led(TEST, r);
     }
   }
 
