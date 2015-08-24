@@ -61,9 +61,11 @@ DallasTemperature sensors(&oneWire);
 static const float v_scale = (1.1 * 1000) / 1024;
 
 static int get_voltage(int pin) {
-  uint16_t analog = analogRead(pin);
+  const uint16_t analog = analogRead(pin);
+  //Serial.print(analog);
+  //Serial.print("\n");
   const float v = v_scale * analog;
-  return int(v * 1000);
+  return int(v);
 }
 
   /*
@@ -123,7 +125,7 @@ static VoltageMonitorRadio radio;
   
 void setup() 
 {
-  Serial.begin(9600);
+  Serial.begin(57600);
   Serial.println(radio.banner());
 
   radio.init();
