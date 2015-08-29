@@ -62,7 +62,8 @@ DallasTemperature sensors(&oneWire);
   
 #define OK_LED 6
 #define TEST_LED 7
-#define RELAY 9
+#define RELAY 5
+#define RELAY_LED 9
 
 class Pin
 {
@@ -154,12 +155,14 @@ public:
   {
     m_on = state;
     digitalWrite(RELAY, state ? LOW : HIGH);
+    digitalWrite(RELAY_LED, state ? LOW : HIGH);
   }
 
   virtual void init()
   {
     RadioDev::init();
     pinMode(RELAY, OUTPUT);
+    pinMode(RELAY_LED, OUTPUT);
 
     // use the 1.1V internal ref for the ADC
     analogReference(INTERNAL);
