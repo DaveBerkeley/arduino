@@ -1,8 +1,11 @@
 
-/* Compass5883JeeNodes.ino
+/* 
+ * Dave Berkeley (c) 2015 projects2@rotwang.co.uk
+ * 
+ * Based on Compass5883JeeNodes.ino
  * code for the Modern Device HMC5883 Compass sensor used with JeeNodes
  * Requires the JeeLib library found here: https://github.com/jcw/jeelib
- * code in the public domain
+ * code in the public domain.
  */
 
 #include <JeeLib.h>
@@ -13,15 +16,11 @@
 #define HMC5883_ContinuousModeCommand 0x00
 #define HMC5883_DataOutputXMSBAddress  0x03
 
-int regb=0x01;
-int regbdata=0x40;
-
-const int portForCompass = 1;  // change this number to port number you are using for sensor
-PortI2C myBus (portForCompass);
-//DeviceI2C compass (myBus, HMC5883_WriteAddress); 
+#define regb     0x01
+#define regbdata  0x40
 
 class Magnetometer : public DeviceI2C {
-    int outputData[6];
+    int data[6];
     PortI2C& m_port;
 
 public:
@@ -31,7 +30,7 @@ public:
     {
     }
  
-    void convert(int* x, int* y, int* z)
+    void convert(int16_t* x, int16_t* y, int16_t* z)
     {
       int result = m_port.start(HMC5883_WriteAddress);
 
@@ -45,38 +44,43 @@ public:
       write(HMC5883_ContinuousModeCommand);
       receive();
       for (int i=0; i<5; i++){ 
-          outputData[i] = read(0);
+          data[i] = read(0);
       }
-      outputData[5] = read(1); 
+      data[5] = read(1); 
       stop();
 
-      *x = (outputData[0] << 8) | outputData[1];
-      *z = (outputData[2] << 8) | outputData[3];
-      *y = (outputData[4] << 8) | outputData[5];
+      *x = (data[0] << 8) | data[1];
+      *z = (data[2] << 8) | data[3];
+      *y = (data[4] << 8) | data[5];
     }
 };
 
+  /*
+  *
+  */
+
+#define JEEPORT 1
+
+PortI2C myBus (JEEPORT);
+
 Magnetometer magnetometer(myBus);
+
+  /*
+  *
+  */
 
 void setup () {
     Serial.begin(57600);
 
-    if (magnetometer.isPresent () == 1){
-        Serial.print("HMC5883 compass found on Port ");
-        Serial.println(portForCompass);
-    }
-    else {
+    if (!magnetometer.isPresent ()){
         Serial.print("No compass found on Port ");
-        Serial.print(portForCompass);
-        Serial.println(", check port setting, and orienation");
+        Serial.print(JEEPORT);
+        Serial.print("\n");
     }
-
 }
 
 void loop() {
-    delay(500);
-
-    int x,y,z;
+    int16_t x,y,z;
     magnetometer.convert(& x, &y, &z);
 
     Serial.print(x);
@@ -85,6 +89,8 @@ void loop() {
     Serial.print(" ");
     Serial.print(z);
     Serial.print("\n");
+
+    delay(500);
 }
 
 // FIN
