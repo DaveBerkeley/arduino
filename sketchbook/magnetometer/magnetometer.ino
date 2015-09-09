@@ -110,11 +110,6 @@ public:
       *x = (data[0] << 8) | data[1];
       *z = (data[2] << 8) | data[3];
       *y = (data[4] << 8) | data[5];
-
-      send();
-      write(ModeReg);
-      write(ModeIdle);
-      stop();
     }
 };
 
@@ -201,7 +196,7 @@ void setup () {
         Serial.print("\n");
     }
     
-    //magnetometer.set_gain(7);
+    magnetometer.set_gain(7);
     
     radio.init();
 }
