@@ -42,12 +42,6 @@ EMPTY_INTERRUPT(WDT_vect);
    */
 
 #define HMC5883_WriteAddress 0x1E //  i.e 0x3C >> 1
-#define HMC5883_ModeRegisterAddress 0x02
-#define HMC5883_ContinuousModeCommand 0x00
-#define HMC5883_DataOutputXMSBAddress  0x03
-
-#define regb     0x01
-#define regbdata  0x40
 
   /*
    *
@@ -56,26 +50,56 @@ EMPTY_INTERRUPT(WDT_vect);
 class Magnetometer : public DeviceI2C {
     int16_t data[6];
     PortI2C& m_port;
+    uint8_t m_gain;
+
+    enum {
+      // Register Map
+      ConfigRegA    = 0x00,
+      ConfigRegB    = 0x01,
+      ModeReg       = 0x02,
+      DataOutputReg = 0x03,
+    }  HMC5883_Reg;
+
+    enum {
+      // Mode Commands
+      ModeContinuous = 0x00,
+      ModeSingle     = 0x01,
+      ModeIdle       = 0x02,
+    }  ModeCommand;
 
 public:
     Magnetometer(PortI2C& port) 
     :  m_port(port),
-       DeviceI2C(port, HMC5883_WriteAddress)
+       DeviceI2C(port, HMC5883_WriteAddress),
+       m_gain(1)
     {
+    }
+
+    void set_gain(uint8_t code)
+    {
+      send();
+      write(ConfigRegB);
+      write(code << 5);
+      stop();
+
+      m_gain = code;
+    }
+    
+    uint8_t get_gain()
+    {
+      return m_gain;
     }
  
     void convert(int16_t* x, int16_t* y, int16_t* z)
     {
       int result = m_port.start(HMC5883_WriteAddress);
 
-      send();
-      write(regb);   
-      write(regbdata);   
-      stop();
+      //set_gain(1);
+      set_gain(m_gain);
 
       send();
-      write(HMC5883_ModeRegisterAddress);
-      write(HMC5883_ContinuousModeCommand);
+      write(ModeReg);
+      write(ModeSingle);
       receive();
       for (int i=0; i<5; i++){ 
           data[i] = read(0);
@@ -86,6 +110,11 @@ public:
       *x = (data[0] << 8) | data[1];
       *z = (data[2] << 8) | data[3];
       *y = (data[4] << 8) | data[5];
+
+      send();
+      write(ModeReg);
+      write(ModeIdle);
+      stop();
     }
 };
 
@@ -105,6 +134,7 @@ Magnetometer magnetometer(myBus);
 #define PRESENT_X           (1 << 3)
 #define PRESENT_Y           (1 << 4)
 #define PRESENT_Z           (1 << 5)
+#define PRESENT_GAIN        (1 << 6)
 
   /*
   *
@@ -145,6 +175,9 @@ public:
     msg->append(PRESENT_X, & x, sizeof(x));
     msg->append(PRESENT_Y, & y, sizeof(y));
     msg->append(PRESENT_Z, & z, sizeof(z));
+    
+    uint8_t gain = magnetometer.get_gain();
+    msg->append(PRESENT_GAIN, & gain, sizeof(gain));
   }
 
   virtual void loop(void)
@@ -167,6 +200,8 @@ void setup () {
         Serial.print(JEEPORT);
         Serial.print("\n");
     }
+    
+    //magnetometer.set_gain(7);
     
     radio.init();
 }
