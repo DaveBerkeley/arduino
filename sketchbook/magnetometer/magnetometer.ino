@@ -30,12 +30,29 @@
 #include <radiodev.h>
 #include <radioutils.h>
 
+#include <OneWire.h>
+#include <DallasTemperature.h>
+
   /*
    *
    */
 
 // needed by the watchdog code
 EMPTY_INTERRUPT(WDT_vect);
+
+  /*
+  *
+  */
+  
+// Data wire is plugged into port 2 on the Radio Board
+#define ONE_WIRE_BUS 5 // jeenode port 1 digital pin
+#define PULLUP_PIN A1  // jeenode port 1 analog pin
+
+// Setup a oneWire instance to communicate with any OneWire devices (not just Maxim/Dallas temperature ICs)
+OneWire oneWire(ONE_WIRE_BUS);
+
+// Pass our oneWire reference to Dallas Temperature. 
+DallasTemperature sensors(&oneWire);
 
   /*
    *  HMC5883 3-axis Magnetometer
@@ -151,7 +168,8 @@ public:
     // use the 1.1V internal ref for the ADC
     analogReference(INTERNAL);
     
-    //pinMode(PULLUP_PIN, INPUT_PULLUP);
+    pinMode(PULLUP_PIN, INPUT_PULLUP);
+    sensors.begin();
   }
 
   virtual const char* banner()
@@ -161,6 +179,11 @@ public:
 
   virtual void append_message(Message* msg)
   {
+    sensors.requestTemperatures(); // Send the command to get temperatures
+    const float ft = sensors.getTempCByIndex(0);
+    const uint16_t t = int(ft * 100);
+    msg->append(PRESENT_TEMPERATURE, & t, sizeof(t));
+
     const uint16_t vcc = read_vcc();
     msg->append(PRESENT_VCC, & vcc, sizeof(vcc));
     
