@@ -37,7 +37,7 @@ EMPTY_INTERRUPT(WDT_vect);
   *
   */
   
-// Data wire is plugged into port 2 on the Arduino
+// Data wire
 #define ONE_WIRE_BUS 4 // jeenode port 1 digital pin
 #define PULLUP_PIN A0  // jeenode port 1 analog pin
 
