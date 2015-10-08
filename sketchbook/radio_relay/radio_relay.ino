@@ -38,8 +38,8 @@ EMPTY_INTERRUPT(WDT_vect);
   */
   
 // Data wire
-#define ONE_WIRE_BUS 4 // jeenode port 1 digital pin
-#define PULLUP_PIN A0  // jeenode port 1 analog pin
+#define ONE_WIRE_BUS 5 // jeenode port 1 digital pin
+#define PULLUP_PIN A1  // jeenode port 1 analog pin
 
 // Setup a oneWire instance to communicate with any OneWire devices (not just Maxim/Dallas temperature ICs)
 OneWire oneWire(ONE_WIRE_BUS);
@@ -62,7 +62,7 @@ DallasTemperature sensors(&oneWire);
   
 #define OK_LED 6
 #define TEST_LED 7
-#define RELAY 5
+#define RELAY 4
 #define RELAY_LED 9
 
 class Pin
