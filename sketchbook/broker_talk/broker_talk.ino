@@ -47,6 +47,7 @@ DallasTemperature sensors(&oneWire);
 #define TX_LED 6
 #define RX_LED 7
 #define LOOP_LED 8
+#define UNKNOWN_LED 9
 
 static void tx_led(byte on) {
   digitalWrite(TX_LED, !on);
@@ -58,6 +59,10 @@ static void rx_led(byte on) {
 
 static void status_led(byte on) {
   digitalWrite(LOOP_LED, !on);
+}
+
+static void unknown_led(byte on) {
+  digitalWrite(UNKNOWN_LED, !on);
 }
 
 class LED {
@@ -92,12 +97,14 @@ public:
 static LED tx(tx_led);
 static LED rx(rx_led);
 static LED status(status_led);
+static LED unknown(unknown_led);
 
 static int8_t leds[] = { 
- TX_LED,
- RX_LED,
- LOOP_LED,
- -1,
+  TX_LED,
+  RX_LED,
+  LOOP_LED,
+  UNKNOWN_LED,
+  -1,
 };
   /*
   *
@@ -241,15 +248,15 @@ static int decode_command(uint8_t* data, int length)
   if (!(command.get_ack()))
     return 0;
   
+  unknown.set(0);
+
   if (length > 4) {
     uint32_t mask;
     if (command.extract(1<<0, & mask, sizeof(mask))) {
       unknown_devs = mask;
       if (mask) {
-        status.set(8000);
+        unknown.set(8000);
       }
-    } else {
-      status.set(0);
     }
   }
 
@@ -315,6 +322,7 @@ void loop () {
     tx.poll();
     rx.poll();
     status.poll();
+    unknown.poll();
   }
 
   // send any rx data to the host  
