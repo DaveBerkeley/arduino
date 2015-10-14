@@ -23,25 +23,41 @@
 
 #include <radionet.h>
 
+#include <OneWire.h>
+#include <DallasTemperature.h>
+
+  /*
+  *
+  */
+  
+// Data wire
+#define ONE_WIRE_BUS 5 // jeenode port 1 digital pin
+#define PULLUP_PIN A1  // jeenode port 1 analog pin
+
+// Setup a oneWire instance to communicate with any OneWire devices (not just Maxim/Dallas temperature ICs)
+OneWire oneWire(ONE_WIRE_BUS);
+
+// Pass our oneWire reference to Dallas Temperature. 
+DallasTemperature sensors(&oneWire);
+
  /*
   *
   */
 
-#define TX_LED 4
-#define RX_LED 5
-#define LOOP_LED 6
-#define GND_LED 7
+#define TX_LED 6
+#define RX_LED 7
+#define LOOP_LED 8
 
 static void tx_led(byte on) {
-  digitalWrite(TX_LED, on);
+  digitalWrite(TX_LED, !on);
 }
 
 static void rx_led(byte on) {
-  digitalWrite(RX_LED, on);
+  digitalWrite(RX_LED, !on);
 }
 
 static void status_led(byte on) {
-  digitalWrite(LOOP_LED, on);
+  digitalWrite(LOOP_LED, !on);
 }
 
 class LED {
@@ -77,6 +93,12 @@ static LED tx(tx_led);
 static LED rx(rx_led);
 static LED status(status_led);
 
+static int8_t leds[] = { 
+ TX_LED,
+ RX_LED,
+ LOOP_LED,
+ -1,
+};
   /*
   *
   */
@@ -203,18 +225,6 @@ static void packet_to_host(void)
 }
 
  /*
-  *  Temperature 
-  */
-
-static const float temp_scale = (1.1 * 100) / 1024;
-
-static int get_temperature(int pin) {
-  uint16_t analog = analogRead(pin);
-  const float t = temp_scale * analog;
-  return int(t * 100);
-}
-
- /*
   *
   */
 
@@ -223,8 +233,6 @@ static uint32_t unknown_devs;
 
 // 'present' flags
 #define PRESENT_TEMP 0x01
-
-#define TEMP_PIN 0
 
 static int decode_command(uint8_t* data, int length)
 {
@@ -246,7 +254,10 @@ static int decode_command(uint8_t* data, int length)
   }
 
   Message response(command.get_mid(), GATEWAY_ID);
-  const uint16_t t = get_temperature(TEMP_PIN);
+
+  sensors.requestTemperatures(); // Send the command to get temperatures
+  const float ft = sensors.getTempCByIndex(0);
+  const uint16_t t = int(ft * 100);
   response.append(PRESENT_TEMP, & t, sizeof(t));
 
   to_host(GATEWAY_ID, (uint8_t*) response.data(), response.size());
@@ -263,18 +274,19 @@ static byte my_node = 0;
 void setup () {
   Serial.begin(57600);
 
-  pinMode(RX_LED, OUTPUT);
-  pinMode(TX_LED, OUTPUT);
-  pinMode(LOOP_LED, OUTPUT);
-  pinMode(GND_LED, OUTPUT);
-
-  digitalWrite(TX_LED, 0);
-  digitalWrite(RX_LED, 0);
-  digitalWrite(LOOP_LED, 0);
-  digitalWrite(GND_LED, 0);
+  for (int i = 0; ; i++) {
+    const int8_t p = leds[i];
+    if (p == -1)
+      break;
+    pinMode(p, OUTPUT);
+    digitalWrite(p, HIGH);
+  }
 
   // use the 1.1V internal ref for the ADC
   analogReference(INTERNAL);
+    
+  pinMode(PULLUP_PIN, INPUT_PULLUP);
+  sensors.begin();
 
   rf12_initialize(my_node = GATEWAY_ID, RF12_868MHZ, 6);
   //my_node = rf12_config();
