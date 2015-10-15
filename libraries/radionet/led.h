@@ -35,7 +35,6 @@ public:
         if (p == -1)
           break;
         pinMode(p, OUTPUT);
-        digitalWrite(p, HIGH);
       }
   }
 };

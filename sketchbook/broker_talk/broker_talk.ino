@@ -71,6 +71,11 @@ static LED rx(set_rx_led);
 static LED status_led(set_status_led);
 static LED unknown(set_unknown_led);
 
+static LED* all_leds[] = {
+    & tx, & rx, & status_led, & unknown, 
+    0
+};
+
 static int8_t leds[] = { 
   TX_LED,
   RX_LED,
@@ -264,7 +269,17 @@ void setup () {
   sensors.begin();
 
   rf12_initialize(my_node = GATEWAY_ID, RF12_868MHZ, 6);
-  //my_node = rf12_config();
+
+  // LEDs off
+  for (LED** led = all_leds; *led; ++led) {
+      (*led)->set(false);
+  }
+  // chase the LEDs
+  for (LED** led = all_leds; *led; ++led) {
+      (*led)->set(true);
+      delay(200);
+      (*led)->set(false);
+  }
 }
 
 MilliTimer sendTimer;
