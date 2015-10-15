@@ -226,8 +226,17 @@ static void packet_to_host(void)
 
 // Map of unknown devices
 static uint32_t unknown_devs;
+// Map of known sleepy devices
+static uint32_t sleepy_devs;
+
+static bool is_sleepy(uint8_t dev)
+{
+    return false;
+    return sleepy_devs & (1 << dev);
+}
 
 #define CMD_UNKNOWN (1<<0)
+#define CMD_SLEEPY (1<<1)
 
 // 'present' flags
 #define PRESENT_TEMP 0x01
@@ -236,14 +245,21 @@ static int decode_command(uint8_t* data, int length)
 {
   Message command((void*) data);
 
-  unknown_led.set(0);
+  //unknown_led.set(0);
 
   // Check for unknown device bitmap
   uint32_t mask;
   if (command.extract(CMD_UNKNOWN, & mask, sizeof(mask))) {
     unknown_devs = mask;
     if (mask) {
-      unknown_led.set(8000);
+      //unknown_led.set(8000);
+    }
+  }
+
+  if (command.extract(CMD_SLEEPY, & mask, sizeof(mask))) {
+    sleepy_devs = mask;
+    if (mask) {
+      //unknown_led.set(8000);
     }
   }
 
@@ -275,6 +291,18 @@ static Packet* next_packet()
         if (p == host_packet)
             continue;
         if (p->node != 0)
+            return p;
+    }
+    return 0;
+}
+
+static Packet* get_packet(uint8_t dev)
+{
+    for (int i = 0; i < MAX_PACKETS; ++i) {
+        Packet* p = & packets[i];
+        if (p == host_packet)
+            continue;
+        if (p->node == dev)
             return p;
     }
     return 0;
@@ -319,7 +347,6 @@ void setup () {
   parser.reset(host_packet);
 }
 
-MilliTimer sendTimer;
 MilliTimer ledTimer;
 #define FLASH_PERIOD 2
 
@@ -356,7 +383,7 @@ static void mark_ack(uint8_t dev, uint8_t mid)
   */
 
 void loop () {
-  
+ 
   // Flash the lights
   if (ledTimer.poll(25))
   {
@@ -389,8 +416,17 @@ void loop () {
  
       if (unknown_devs & (1<<dev)) {
         msg.set_admin();
-      } else {
-        // TODO : send any queued messages
+      }
+
+      if (is_sleepy(dev)) {
+          // TODO : send any queued messages
+          unknown_led.set(10);
+          Packet* pm = get_packet(dev);
+          if (pm) {
+              Message* m = (Message*) pm->data;
+              msg.append(m->get_flags(), m->data(), m->size()); 
+              pm->reset();
+          }
       }
  
       rf12_sendStart(dev, msg.data(), msg.size());
@@ -402,12 +438,16 @@ void loop () {
   // read from host rx buffers
   Packet* pm = next_packet();
   if (pm) {
-    if (rf12_canSend()) {
-      // transmit waiting message
-      tx.set(FLASH_PERIOD);
- 
-      rf12_sendStart(pm->node, pm->data, pm->length);
-      pm->reset();
+    if (is_sleepy(pm->node)) {
+        // TODO : queue sends to sleepy nodes
+    } else {
+        if (rf12_canSend()) {
+          // transmit waiting message
+          tx.set(FLASH_PERIOD);
+     
+          rf12_sendStart(pm->node, pm->data, pm->length);
+          pm->reset();
+        }
     }
     return;
   }
@@ -420,9 +460,7 @@ void loop () {
         // it is for me!!
         decode_command(host_packet->data, host_packet->length);
       } else {
-        // copy to rx buffers
-
-        // TODO : for sleepy devices, queue awaiting ACK_REQ
+        // leave it in rx buffers and select a new host buffer
         host_packet = next_host_packet();
       }
       parser.reset(host_packet);
