@@ -87,7 +87,7 @@ static int8_t leds[] = {
   /*
   *
   */
-  
+
 enum PARSE_STATE
 {
   WAIT,
@@ -98,38 +98,41 @@ enum PARSE_STATE
 
 #define MAX_DATA 128
 
-class ParserMessage
+class Packet
 {
 public:
   int node;
   int length;
   unsigned char data[MAX_DATA];
+
+  void reset()
+  {
+      node = 0;
+      length = -1;
+  }
 };
 
 class Parser
 {
 public:
-  int state;
+  PARSE_STATE state;
   unsigned char* next_data;
   int count;
-  //int node;
-  //unsigned char data[MAX_DATA];
-  //ParserMessage* msg;
 
   Parser()
+  : state(WAIT)
   {
   }
 
-  void reset(ParserMessage* msg)
+  void reset(Packet* msg)
   {
-    msg->length = -1;
-    msg->node = 0;
+    msg->reset();
     count = 0;
     next_data = 0;
     state = WAIT;
   }
 
-  int parse(ParserMessage* msg, unsigned char c)
+  int parse(Packet* msg, unsigned char c)
   {
     switch (state)
     {
@@ -138,7 +141,7 @@ public:
           state = NODE;
           return 0;
         }
-        
+ 
         reset(msg);      
         return 0;
       }
@@ -194,6 +197,7 @@ public:
         return 1;
       }
     }
+    return 0;
   }
 };
 
@@ -259,14 +263,32 @@ static int decode_command(uint8_t* data, int length)
 }
 
 static Parser parser;
-static ParserMessage m;
-static ParserMessage* pm = & m;
+static Packet packets[2];
+static uint8_t host_idx = 0;
+static Packet* host_packet = & packets[host_idx];
+
+static Packet* next_packet()
+{
+    for (int i = 0; i < 2; ++i) {
+        Packet* p = & packets[i];
+        if (p == host_packet)
+            continue;
+        if (p->node != 0)
+            return p;
+    }
+    return 0;
+}
+
+static Packet* next_host_packet()
+{
+  host_idx += 1;
+  host_idx %= 2;
+  return & packets[host_idx];
+}
 
  /*
   *
   */
-  
-static byte my_node = 0;
 
 void setup () {
   Serial.begin(57600);
@@ -279,7 +301,7 @@ void setup () {
   pinMode(PULLUP_PIN, INPUT_PULLUP);
   sensors.begin();
 
-  rf12_initialize(my_node = GATEWAY_ID, RF12_868MHZ, 6);
+  rf12_initialize(GATEWAY_ID, RF12_868MHZ, 6);
 
   // LEDs off
   for (LED** led = all_leds; *led; ++led) {
@@ -292,12 +314,11 @@ void setup () {
       (*led)->set(false);
   }
 
-  parser.reset(pm);
+  parser.reset(host_packet);
 }
 
 MilliTimer sendTimer;
 MilliTimer ledTimer;
-byte needToSend;
 #define FLASH_PERIOD 2
 
 #define MAX_DEVS 32 // defined elsewhere?
@@ -306,6 +327,7 @@ static uint32_t ack_mask;
 
 static uint8_t get_next_ack()
 {
+    // Return the next device requiring an ack
     uint32_t mask = ack_mask;
     for (uint8_t dev = 0; mask; dev += 1, mask >>= 1) {
         if (mask & 0x01) {
@@ -321,8 +343,6 @@ static uint8_t get_next_ack()
 
 void loop () {
   
-  static int hasSend = 0;
-
   // Flash the lights
   if (ledTimer.poll(25))
   {
@@ -338,6 +358,7 @@ void loop () {
 
     Message msg((void*) rf12_data);
     if (msg.get_ack()) {
+        // Mark the device as requiring an ACK
         const uint8_t mid = msg.get_mid();
         const uint8_t dest = rf12_hdr & 0x1F;
         ack_mids[dest] = mid;
@@ -356,6 +377,8 @@ void loop () {
       if (unknown_devs & (1<<dev)) {
         msg.set_admin();
       }
+
+      // TODO : send any queued messages
  
       rf12_sendStart(dev, msg.data(), msg.size());
 
@@ -364,31 +387,31 @@ void loop () {
     return;
   }
 
-  // TODO : read from rx buffers
-  if (hasSend) {
+  // read from rx buffers
+  Packet* pm = next_packet();
+  if (pm) {
     if (rf12_canSend()) {
       // transmit waiting message
       tx.set(FLASH_PERIOD);
  
       rf12_sendStart(pm->node, pm->data, pm->length);
-      parser.reset(pm);
-      hasSend = 0;
+      pm->reset();
     }
     return;
   }
 
   // read any host messages
   if (Serial.available()) {
-    if (parser.parse(pm, Serial.read())) {
+    if (parser.parse(host_packet, Serial.read())) {
       status_led.set(FLASH_PERIOD);
-      if (pm->node == GATEWAY_ID) {
+      if (host_packet->node == GATEWAY_ID) {
         // it is for me!!
-        decode_command(pm->data, pm->length);
-        parser.reset(pm);
+        decode_command(host_packet->data, host_packet->length);
       } else {
-        // TODO : copy to rx buffers
-        hasSend = 1;
+        // copy to rx buffers
+        host_packet = next_host_packet();
       }
+      parser.reset(host_packet);
     }
   }
 }
