@@ -69,10 +69,10 @@ static void set_unknown_led(bool on) {
 static LED tx(set_tx_led);
 static LED rx(set_rx_led);
 static LED status_led(set_status_led);
-static LED unknown(set_unknown_led);
+static LED unknown_led(set_unknown_led);
 
 static LED* all_leds[] = {
-    & tx, & rx, & status_led, & unknown, 
+    & tx, & rx, & status_led, & unknown_led, 
     0
 };
 
@@ -236,20 +236,20 @@ static int decode_command(uint8_t* data, int length)
 {
   Message command((void*) data);
 
-  if (!(command.get_ack()))
-    return 0;
-  
-  unknown.set(0);
+  unknown_led.set(0);
 
   // Check for unknown device bitmap
   uint32_t mask;
   if (command.extract(CMD_UNKNOWN, & mask, sizeof(mask))) {
     unknown_devs = mask;
     if (mask) {
-      unknown.set(8000);
+      unknown_led.set(8000);
     }
   }
 
+  if (!(command.get_ack()))
+    return 0;
+  
   Message response(command.get_mid(), GATEWAY_ID);
 
   sensors.requestTemperatures(); // Send the command to get temperatures
@@ -327,16 +327,28 @@ MilliTimer ledTimer;
 static uint8_t ack_mids[MAX_DEVS];
 static uint32_t ack_mask;
 
-static uint8_t get_next_ack()
+static uint8_t get_next_ack(uint8_t* mid)
 {
     // Return the next device requiring an ack
     uint32_t mask = ack_mask;
     for (uint8_t dev = 0; mask; dev += 1, mask >>= 1) {
         if (mask & 0x01) {
+            *mid = ack_mids[dev];
             return dev;
         }
     }
     return 0;
+}
+
+static void clear_ack(uint8_t dev)
+{
+    ack_mask &= ~(1 << dev);
+}
+
+static void mark_ack(uint8_t dev, uint8_t mid)
+{
+    ack_mids[dev] = mid;
+    ack_mask |= 1 << dev;
 }
 
   /*
@@ -356,40 +368,38 @@ void loop () {
   // send any rx data to the host  
   if (rf12_recvDone() && (rf12_crc == 0)) {
     rx.set(FLASH_PERIOD);
+    // Pass the data straight to the host
     packet_to_host();
 
     Message msg((void*) rf12_data);
     if (msg.get_ack()) {
-        // Mark the device as requiring an ACK
-        const uint8_t mid = msg.get_mid();
-        const uint8_t dest = rf12_hdr & 0x1F;
-        ack_mids[dest] = mid;
-        ack_mask |= 1 << dest;
+        // Mark the device as requiring an ACK for mid
+        mark_ack(rf12_hdr & 0x1F, msg.get_mid());
     }
   }
 
-  const uint8_t dev = get_next_ack();
+  uint8_t mid;
+  const uint8_t dev = get_next_ack(& mid);
   if (dev) {
     if (rf12_canSend()) {
       // send ack back
       tx.set(FLASH_PERIOD);
  
-      Message msg(ack_mids[dev], dev);
+      Message msg(mid, dev);
  
       if (unknown_devs & (1<<dev)) {
         msg.set_admin();
+      } else {
+        // TODO : send any queued messages
       }
-
-      // TODO : send any queued messages
  
       rf12_sendStart(dev, msg.data(), msg.size());
-
-      ack_mask &= ~(1 << dev);
+      clear_ack(dev);
     }    
     return;
   }
 
-  // read from rx buffers
+  // read from host rx buffers
   Packet* pm = next_packet();
   if (pm) {
     if (rf12_canSend()) {
@@ -411,6 +421,8 @@ void loop () {
         decode_command(host_packet->data, host_packet->length);
       } else {
         // copy to rx buffers
+
+        // TODO : for sleepy devices, queue awaiting ACK_REQ
         host_packet = next_host_packet();
       }
       parser.reset(host_packet);
