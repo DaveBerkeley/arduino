@@ -231,7 +231,6 @@ static uint32_t sleepy_devs;
 
 static bool is_sleepy(uint8_t dev)
 {
-    return false;
     return sleepy_devs & (1 << dev);
 }
 
@@ -284,9 +283,11 @@ static Packet packets[MAX_PACKETS];
 static uint8_t host_idx = 0;
 static Packet* host_packet = & packets[host_idx];
 
-static Packet* next_packet()
+static Packet* next_packet(bool not_sleepy=true)
 {
     for (int i = 0; i < MAX_PACKETS; ++i) {
+        if (not_sleepy && is_sleepy(i))
+            continue;
         Packet* p = & packets[i];
         if (p == host_packet)
             continue;
@@ -310,7 +311,7 @@ static Packet* get_packet(uint8_t dev)
 
 static Packet* next_host_packet()
 {
-    //  TODO : Need better buffer then this!
+    //  TODO : Need better buffer than this!
     host_idx += 1;
     host_idx %= MAX_PACKETS;
     return & packets[host_idx];
@@ -378,6 +379,16 @@ static void mark_ack(uint8_t dev, uint8_t mid)
     ack_mask |= 1 << dev;
 }
 
+    /*
+     *  Send Debug message
+    */
+
+void tx_debug(const char* h)
+{
+    // NOTE : CRASHES HOST PARSER!
+    to_host(-1, (uint8_t*) h, (int) strlen(h));
+}
+
   /*
   *  Main loop
   */
@@ -419,16 +430,19 @@ void loop () {
       }
 
       if (is_sleepy(dev)) {
-          // TODO : send any queued messages
-          unknown_led.set(10);
+          // send any queued messages
           Packet* pm = get_packet(dev);
           if (pm) {
-              Message* m = (Message*) pm->data;
-              msg.append(m->get_flags(), m->data(), m->size()); 
+              unknown_led.set(10);
+
+              rf12_sendStart(pm->node, pm->data, pm->length);
               pm->reset();
+              // TODO : notify host that packet was sent?
+              return;
           }
       }
  
+      // Send ACK packet
       rf12_sendStart(dev, msg.data(), msg.size());
       clear_ack(dev);
     }    
@@ -439,7 +453,7 @@ void loop () {
   Packet* pm = next_packet();
   if (pm) {
     if (is_sleepy(pm->node)) {
-        // TODO : queue sends to sleepy nodes
+        // keep packet in queue to send to sleepy node
     } else {
         if (rf12_canSend()) {
           // transmit waiting message
