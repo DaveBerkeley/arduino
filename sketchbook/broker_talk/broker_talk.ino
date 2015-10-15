@@ -98,31 +98,38 @@ enum PARSE_STATE
 
 #define MAX_DATA 128
 
-class Parser
+class ParserMessage
 {
-  
 public:
-  int state;
   int node;
   int length;
-  int count;
-  unsigned char* next_data;
   unsigned char data[MAX_DATA];
+};
+
+class Parser
+{
+public:
+  int state;
+  unsigned char* next_data;
+  int count;
+  //int node;
+  //unsigned char data[MAX_DATA];
+  //ParserMessage* msg;
 
   Parser()
   {
-    reset();
   }
 
-  void reset(void)
+  void reset(ParserMessage* msg)
   {
-    length = -1;
+    msg->length = -1;
+    msg->node = 0;
     count = 0;
     next_data = 0;
     state = WAIT;
   }
 
-  int parse(unsigned char c)
+  int parse(ParserMessage* msg, unsigned char c)
   {
     switch (state)
     {
@@ -132,52 +139,52 @@ public:
           return 0;
         }
         
-        reset();      
+        reset(msg);      
         return 0;
       }
       case NODE : {
         if (c == 'i') {
-          node = 0;
+          msg->node = 0;
           return 0;
         }
         if ((c >= '0') && (c <= '9')) {
-          node *= 10;
-          node += c - '0';
+          msg->node *= 10;
+          msg->node += c - '0';
           return 0;
         }
         if (c == 'e') {
-          length = 0;
+          msg->length = 0;
           state = LENGTH;
           return 0;
         }
         
-        reset();
+        reset(msg);
         return 0;
       }
       
       case LENGTH : {
         if (c == ':') {
-          if (length >= MAX_DATA) {
-            reset();
+          if (msg->length >= MAX_DATA) {
+            reset(msg);
             return 0;
           }
           state = DATA;
           count = 0;
-          next_data = data;
+          next_data = msg->data;
           return 0;
         }
         if ((c >= '0') && (c <= '9')) {
-          length *= 10;
-          length += c - '0';
+          msg->length *= 10;
+          msg->length += c - '0';
           return 0;
         }
         
-        reset();
+        reset(msg);
         return 0;
       }
       
       case DATA : {
-        if (count < length) {
+        if (count < msg->length) {
           *next_data++ = c;
           count++;
           return 0;
@@ -251,6 +258,10 @@ static int decode_command(uint8_t* data, int length)
   return 1;
 }
 
+static Parser parser;
+static ParserMessage m;
+static ParserMessage* pm = & m;
+
  /*
   *
   */
@@ -280,6 +291,8 @@ void setup () {
       delay(200);
       (*led)->set(false);
   }
+
+  parser.reset(pm);
 }
 
 MilliTimer sendTimer;
@@ -302,8 +315,6 @@ static uint8_t get_next_ack()
     return 0;
 }
 
-Parser parser;
-
   /*
   *  Main loop
   */
@@ -311,7 +322,7 @@ Parser parser;
 void loop () {
   
   static int hasSend = 0;
-  
+
   // Flash the lights
   if (ledTimer.poll(25))
   {
@@ -353,13 +364,14 @@ void loop () {
     return;
   }
 
+  // TODO : read from rx buffers
   if (hasSend) {
     if (rf12_canSend()) {
       // transmit waiting message
       tx.set(FLASH_PERIOD);
  
-      rf12_sendStart(parser.node, parser.data, parser.length);
-      parser.reset();
+      rf12_sendStart(pm->node, pm->data, pm->length);
+      parser.reset(pm);
       hasSend = 0;
     }
     return;
@@ -367,16 +379,16 @@ void loop () {
 
   // read any host messages
   if (Serial.available()) {
-    if (parser.parse(Serial.read())) {
+    if (parser.parse(pm, Serial.read())) {
       status_led.set(FLASH_PERIOD);
-      if (parser.node == GATEWAY_ID) {
+      if (pm->node == GATEWAY_ID) {
         // it is for me!!
-        decode_command(parser.data, parser.length);
-        parser.reset();
-        parser.node = 0;
-      }
-      else
+        decode_command(pm->data, pm->length);
+        parser.reset(pm);
+      } else {
+        // TODO : copy to rx buffers
         hasSend = 1;
+      }
     }
   }
 }
