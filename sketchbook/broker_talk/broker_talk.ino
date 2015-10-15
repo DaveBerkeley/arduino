@@ -264,7 +264,7 @@ void setup () {
 
   // use the 1.1V internal ref for the ADC
   analogReference(INTERNAL);
-    
+
   pinMode(PULLUP_PIN, INPUT_PULLUP);
   sensors.begin();
 
@@ -286,8 +286,21 @@ MilliTimer sendTimer;
 MilliTimer ledTimer;
 byte needToSend;
 #define FLASH_PERIOD 2
-static uint8_t auto_ack_id = 0;
-static uint8_t auto_dest;
+
+#define MAX_DEVS 32 // defined elsewhere?
+static uint8_t ack_mids[MAX_DEVS];
+static uint32_t ack_mask;
+
+static uint8_t get_next_ack()
+{
+    uint32_t mask = ack_mask;
+    for (uint8_t dev = 0; mask; dev += 1, mask >>= 1) {
+        if (mask & 0x01) {
+            return dev;
+        }
+    }
+    return 0;
+}
 
 Parser parser;
 
@@ -300,39 +313,42 @@ void loop () {
   static int hasSend = 0;
   
   // Flash the lights
-  if (ledTimer.poll(50))
+  if (ledTimer.poll(25))
   {
-    tx.poll();
-    rx.poll();
-    status_led.poll();
-    unknown.poll();
+    for (LED** led = all_leds; *led; ++led) {
+        (*led)->poll();
+    }
   }
 
   // send any rx data to the host  
-  if (rf12_recvDone() && rf12_crc == 0) {
+  if (rf12_recvDone() && (rf12_crc == 0)) {
     rx.set(FLASH_PERIOD);
     packet_to_host();
 
     Message msg((void*) rf12_data);
     if (msg.get_ack()) {
-        auto_ack_id = msg.get_mid();
-        auto_dest = rf12_hdr & 0x1F;
+        const uint8_t mid = msg.get_mid();
+        const uint8_t dest = rf12_hdr & 0x1F;
+        ack_mids[dest] = mid;
+        ack_mask |= 1 << dest;
     }
   }
 
-  if (auto_ack_id) {
+  const uint8_t dev = get_next_ack();
+  if (dev) {
     if (rf12_canSend()) {
       // send ack back
       tx.set(FLASH_PERIOD);
  
-      Message msg(auto_ack_id, auto_dest);
+      Message msg(ack_mids[dev], dev);
  
-      if (unknown_devs & (1<<auto_dest)) {
+      if (unknown_devs & (1<<dev)) {
         msg.set_admin();
       }
  
-      rf12_sendStart(auto_dest, msg.data(), msg.size());
-      auto_ack_id = 0;
+      rf12_sendStart(dev, msg.data(), msg.size());
+
+      ack_mask &= ~(1 << dev);
     }    
     return;
   }
