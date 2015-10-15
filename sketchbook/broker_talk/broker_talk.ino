@@ -22,6 +22,7 @@
 #include <JeeLib.h>
 
 #include <radionet.h>
+#include <led.h>
 
 #include <OneWire.h>
 #include <DallasTemperature.h>
@@ -41,7 +42,7 @@ OneWire oneWire(ONE_WIRE_BUS);
 DallasTemperature sensors(&oneWire);
 
  /*
-  *
+  * LED control
   */
 
 #define TX_LED 6
@@ -49,55 +50,26 @@ DallasTemperature sensors(&oneWire);
 #define LOOP_LED 8
 #define UNKNOWN_LED 9
 
-static void tx_led(byte on) {
+static void set_tx_led(bool on) {
   digitalWrite(TX_LED, !on);
 }
 
-static void rx_led(byte on) {
+static void set_rx_led(bool on) {
   digitalWrite(RX_LED, !on);
 }
 
-static void status_led(byte on) {
+static void set_status_led(bool on) {
   digitalWrite(LOOP_LED, !on);
 }
 
-static void unknown_led(byte on) {
+static void set_unknown_led(bool on) {
   digitalWrite(UNKNOWN_LED, !on);
 }
 
-class LED {
-private:
-  void (*m_fn)(byte on);
-  int m_count;
-public:
-  LED(void (*fn)(byte on))
-  : m_fn(fn),
-    m_count(0)
-  {
-  }
-
-  void set(int count)
-  {
-    (*m_fn)(count > 0);
-    m_count = count;
-  }
-  
-  void poll(void)
-  {
-    if (m_count > 0)
-    {
-      if (!--m_count)
-      {
-        (*m_fn)(0);
-      }
-    }
-  }
-};
-
-static LED tx(tx_led);
-static LED rx(rx_led);
-static LED status(status_led);
-static LED unknown(unknown_led);
+static LED tx(set_tx_led);
+static LED rx(set_rx_led);
+static LED status_led(set_status_led);
+static LED unknown(set_unknown_led);
 
 static int8_t leds[] = { 
   TX_LED,
@@ -321,7 +293,7 @@ void loop () {
   {
     tx.poll();
     rx.poll();
-    status.poll();
+    status_led.poll();
     unknown.poll();
   }
 
@@ -369,7 +341,7 @@ void loop () {
   // read any host messages
   if (Serial.available()) {
     if (parser.parse(Serial.read())) {
-      status.set(FLASH_PERIOD);
+      status_led.set(FLASH_PERIOD);
       if (parser.node == GATEWAY_ID) {
         // it is for me!!
         decode_command(parser.data, parser.length);
