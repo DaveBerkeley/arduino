@@ -78,6 +78,7 @@ static int8_t leds[] = {
   UNKNOWN_LED,
   -1,
 };
+
   /*
   *
   */
@@ -253,13 +254,7 @@ static byte my_node = 0;
 void setup () {
   Serial.begin(57600);
 
-  for (int i = 0; ; i++) {
-    const int8_t p = leds[i];
-    if (p == -1)
-      break;
-    pinMode(p, OUTPUT);
-    digitalWrite(p, HIGH);
-  }
+  LED::init(leds);
 
   // use the 1.1V internal ref for the ADC
   analogReference(INTERNAL);

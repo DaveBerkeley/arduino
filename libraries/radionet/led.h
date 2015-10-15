@@ -26,6 +26,18 @@ public:
       }
     }
   }
+
+  // passed a -1 terminated array of LED pins
+  static void init(int8_t* pins)
+  {
+      for (int i = 0; ; i++) {
+        const int8_t p = pins[i];
+        if (p == -1)
+          break;
+        pinMode(p, OUTPUT);
+        digitalWrite(p, HIGH);
+      }
+  }
 };
 
 //  FIN
