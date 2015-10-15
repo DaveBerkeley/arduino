@@ -262,14 +262,15 @@ static int decode_command(uint8_t* data, int length)
   return 1;
 }
 
+#define MAX_PACKETS 4
 static Parser parser;
-static Packet packets[2];
+static Packet packets[MAX_PACKETS];
 static uint8_t host_idx = 0;
 static Packet* host_packet = & packets[host_idx];
 
 static Packet* next_packet()
 {
-    for (int i = 0; i < 2; ++i) {
+    for (int i = 0; i < MAX_PACKETS; ++i) {
         Packet* p = & packets[i];
         if (p == host_packet)
             continue;
@@ -281,9 +282,10 @@ static Packet* next_packet()
 
 static Packet* next_host_packet()
 {
-  host_idx += 1;
-  host_idx %= 2;
-  return & packets[host_idx];
+    //  TODO : Need better buffer then this!
+    host_idx += 1;
+    host_idx %= MAX_PACKETS;
+    return & packets[host_idx];
 }
 
  /*
