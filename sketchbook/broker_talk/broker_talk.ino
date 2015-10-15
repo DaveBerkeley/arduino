@@ -122,7 +122,7 @@ public:
     switch (state)
     {
       case WAIT : {
-        if (c = 'l') {
+        if (c == 'l') {
           state = NODE;
           return 0;
         }
