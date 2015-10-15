@@ -211,6 +211,8 @@ static void packet_to_host(void)
 // Map of unknown devices
 static uint32_t unknown_devs;
 
+#define CMD_UNKNOWN (1<<0)
+
 // 'present' flags
 #define PRESENT_TEMP 0x01
 
@@ -223,13 +225,12 @@ static int decode_command(uint8_t* data, int length)
   
   unknown.set(0);
 
-  if (length > 4) {
-    uint32_t mask;
-    if (command.extract(1<<0, & mask, sizeof(mask))) {
-      unknown_devs = mask;
-      if (mask) {
-        unknown.set(8000);
-      }
+  // Check for unknown device bitmap
+  uint32_t mask;
+  if (command.extract(CMD_UNKNOWN, & mask, sizeof(mask))) {
+    unknown_devs = mask;
+    if (mask) {
+      unknown.set(8000);
     }
   }
 
