@@ -1,6 +1,6 @@
 
 /*
- Copyright (C) 2012 Dave Berkeley projects@rotwang.co.uk
+ Copyright (C) 2012, 2015 Dave Berkeley projects2@rotwang.co.uk
 
  This program is free software; you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by
@@ -33,8 +33,8 @@
   */
   
 // Data wire
-#define ONE_WIRE_BUS 5 // jeenode port 1 digital pin
-#define PULLUP_PIN A1  // jeenode port 1 analog pin
+#define ONE_WIRE_BUS 5 // jeenode port 2 digital pin
+#define PULLUP_PIN A1  // jeenode port 2 analog pin
 
 // Setup a oneWire instance to communicate with any OneWire devices (not just Maxim/Dallas temperature ICs)
 OneWire oneWire(ONE_WIRE_BUS);
@@ -89,14 +89,6 @@ static int8_t leds[] = {
   *
   */
 
-enum PARSE_STATE
-{
-  WAIT,
-  NODE,
-  LENGTH,
-  DATA,
-};
-
 #define MAX_DATA 128
 
 class Packet
@@ -113,8 +105,20 @@ public:
   }
 };
 
+    /*
+    *   Bencode Parser : for host->radio communication
+    */
+
 class Parser
 {
+  enum PARSE_STATE
+  {
+    WAIT,
+    NODE,
+    LENGTH,
+    DATA,
+  };
+
 public:
   PARSE_STATE state;
   unsigned char* next_data;
@@ -230,20 +234,27 @@ static uint32_t unknown_devs;
 // Map of known sleepy devices
 static uint32_t sleepy_devs;
 
+static bool is_unknown(uint8_t dev)
+{
+    return unknown_devs & (1 << dev);
+}
+
 static bool is_sleepy(uint8_t dev)
 {
     return sleepy_devs & (1 << dev);
 }
 
+// host->radio messages
 #define CMD_UNKNOWN (1<<0)
-#define CMD_SLEEPY (1<<1)
+#define CMD_SLEEPY  (1<<1)
 
-// 'present' flags
-#define PRESENT_TEMP 0x01
-#define PRESENT_PACKET_COUNT 0x02
+// radio->host messages
+#define PRESENT_TEMP            (1<<0)
+#define PRESENT_PACKET_COUNT    (1<<1)
 
 
-  static uint8_t count_packets();
+// TODO : move code about to remove need for declaration
+static uint8_t count_packets();
 
 static int decode_command(uint8_t* data, int length)
 {
@@ -481,7 +492,7 @@ void loop () {
       Message msg(mid, dev);
  
       // Set IDENTIFY request if node is unknown
-      if (unknown_devs & (1<<dev)) {
+      if (is_unknown(dev)) {
         msg.set_admin();
       }
 
