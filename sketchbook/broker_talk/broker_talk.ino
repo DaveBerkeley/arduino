@@ -26,6 +26,7 @@
 
 #include <OneWire.h>
 #include <DallasTemperature.h>
+#include <MsTimer2.h>
 
   /*
   *
@@ -220,12 +221,6 @@ static void packet_to_host(void)
   to_host((int) rf12_hdr, (uint8_t*) rf12_data, (int) rf12_len);
 }
 
-void host_debug(const char* s)
-{
-    // NOTE : currently crashes the host code.
-    to_host(123, (uint8_t*) s, strlen(s));
-}
-
  /*
   *
   */
@@ -291,6 +286,16 @@ static int decode_command(uint8_t* data, int length)
 }
 
     /*
+     *  Send Debug message
+    */
+
+void tx_debug(const char* h)
+{
+    // NOTE : CRASHES HOST PARSER!
+    to_host(-1, (uint8_t*) h, (int) strlen(h));
+}
+
+    /*
     * Packet management
     */
 
@@ -348,12 +353,24 @@ static Packet* next_host_packet()
         return p;
 
     // Need to overwrite an allocated packet.
-    host_debug("overwrite!");
-    unknown_led.set(40);
+    tx_debug("overwrite!");
+    //unknown_led.set(40);
     p = host_packet + 1;
     if (p >= & packets[MAX_PACKETS])
         p = & packets[0];
     return p;
+}
+
+    /*
+    *   Timer Interrupt
+    */
+
+static void on_timer()
+{
+    // Flash the lights
+    for (LED** led = all_leds; *led; ++led) {
+        (*led)->poll();
+    }
 }
 
  /*
@@ -387,10 +404,13 @@ void setup () {
   }
 
   parser.reset(host_packet);
+
+  MsTimer2::set(100, on_timer);
+  MsTimer2::start();
 }
 
-MilliTimer ledTimer;
-#define FLASH_PERIOD 2
+//MilliTimer ledTimer;
+#define FLASH_PERIOD 1
 
 #define MAX_DEVS 32 // defined elsewhere?
 static uint8_t ack_mids[MAX_DEVS];
@@ -420,28 +440,12 @@ static void mark_ack(uint8_t dev, uint8_t mid)
     ack_mask |= 1 << dev;
 }
 
-    /*
-     *  Send Debug message
-    */
-
-void tx_debug(const char* h)
-{
-    // NOTE : CRASHES HOST PARSER!
-    to_host(-1, (uint8_t*) h, (int) strlen(h));
-}
-
   /*
   *  Main loop
   */
 
 void loop () {
-  // Flash the lights
-  if (ledTimer.poll(25))
-  {
-    for (LED** led = all_leds; *led; ++led) {
-        (*led)->poll();
-    }
-  }
+  unknown_led.set(1);
 
   // send any rx data to the host  
   if (rf12_recvDone() && (rf12_crc == 0)) {
