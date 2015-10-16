@@ -310,7 +310,7 @@ void tx_debug(const char* h)
     * Packet management
     */
 
-#define MAX_PACKETS 4
+#define MAX_PACKETS 8
 static Packet packets[MAX_PACKETS];
 static Packet* host_packet = & packets[0];
 
@@ -364,8 +364,8 @@ static Packet* next_host_packet()
         return p;
 
     // Need to overwrite an allocated packet.
-    tx_debug("overwrite!");
-    //unknown_led.set(40);
+    //tx_debug("overwrite!");
+    unknown_led.set(10);
     p = host_packet + 1;
     if (p >= & packets[MAX_PACKETS])
         p = & packets[0];
@@ -456,7 +456,6 @@ static void mark_ack(uint8_t dev, uint8_t mid)
   */
 
 void loop () {
-  unknown_led.set(1);
 
   // send any rx data to the host  
   if (rf12_recvDone() && (rf12_crc == 0)) {
@@ -483,6 +482,7 @@ void loop () {
               tx.set(FLASH_PERIOD);
               rf12_sendStart(pm->node, pm->data, pm->length);
               pm->reset();
+              clear_ack(dev);
               // TODO : notify host that packet was sent?
               return;
           }
@@ -517,7 +517,6 @@ void loop () {
           pm->reset();
         }
     }
-    return;
   }
 
   // read any host messages
