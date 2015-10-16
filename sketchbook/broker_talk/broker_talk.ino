@@ -225,9 +225,9 @@ static void packet_to_host(void)
   to_host((int) rf12_hdr, (uint8_t*) rf12_data, (int) rf12_len);
 }
 
- /*
-  *
-  */
+    /*
+    *   Sleepy / Unknown maps
+    */
 
 // Map of unknown devices
 static uint32_t unknown_devs;
@@ -242,68 +242,6 @@ static bool is_unknown(uint8_t dev)
 static bool is_sleepy(uint8_t dev)
 {
     return sleepy_devs & (1 << dev);
-}
-
-// host->radio messages
-#define CMD_UNKNOWN (1<<0)
-#define CMD_SLEEPY  (1<<1)
-
-// radio->host messages
-#define PRESENT_TEMP            (1<<0)
-#define PRESENT_PACKET_COUNT    (1<<1)
-
-
-// TODO : move code about to remove need for declaration
-static uint8_t count_packets();
-
-static int decode_command(uint8_t* data, int length)
-{
-  Message command((void*) data);
-
-  //unknown_led.set(0);
-
-  // Check for unknown device bitmap
-  uint32_t mask;
-  if (command.extract(CMD_UNKNOWN, & mask, sizeof(mask))) {
-    unknown_devs = mask;
-    if (mask) {
-      //unknown_led.set(8000);
-    }
-  }
-
-  if (command.extract(CMD_SLEEPY, & mask, sizeof(mask))) {
-    sleepy_devs = mask;
-    if (mask) {
-      //unknown_led.set(8000);
-    }
-  }
-
-  if (!(command.get_ack()))
-    return 0;
-  
-  Message response(command.get_mid(), GATEWAY_ID);
-
-  sensors.requestTemperatures(); // Send the command to get temperatures
-  const float ft = sensors.getTempCByIndex(0);
-  const uint16_t t = int(ft * 100);
-  response.append(PRESENT_TEMP, & t, sizeof(t));
-
-  const uint8_t c = count_packets();
-  response.append(PRESENT_PACKET_COUNT, & c, sizeof(c));
-
-  to_host(GATEWAY_ID, (uint8_t*) response.data(), response.size());
-
-  return 1;
-}
-
-    /*
-     *  Send Debug message
-    */
-
-void tx_debug(const char* h)
-{
-    // NOTE : CRASHES HOST PARSER!
-    to_host(-1, (uint8_t*) h, (int) strlen(h));
 }
 
     /*
@@ -342,7 +280,7 @@ static Packet* get_packet(uint8_t dev)
     return 0;
 }
 
-static uint8_t count_packets()
+static uint8_t spare_packets()
 {
     uint8_t count = 0;
     // Find a packet allocated to dev
@@ -353,7 +291,7 @@ static uint8_t count_packets()
         if (p->node)
             count++;
     }
-    return count;
+    return MAX_PACKETS - 1 - count;
 }
 
 static Packet* next_host_packet()
@@ -370,6 +308,72 @@ static Packet* next_host_packet()
     if (p >= & packets[MAX_PACKETS])
         p = & packets[0];
     return p;
+}
+
+    /*
+    *
+    */
+
+// host->radio messages
+#define CMD_UNKNOWN (1<<0)
+#define CMD_SLEEPY  (1<<1)
+
+// radio->host messages
+#define PRESENT_TEMP            (1<<0)
+#define PRESENT_PACKET_COUNT    (1<<1)
+
+
+// TODO : move code about to remove need for declaration
+static uint8_t spare_packets();
+
+static int decode_command(uint8_t* data, int length)
+{
+  Message command((void*) data);
+
+  //unknown_led.set(0);
+
+  // Check for unknown device bitmap
+  uint32_t mask;
+  if (command.extract(CMD_UNKNOWN, & mask, sizeof(mask))) {
+    unknown_devs = mask;
+    if (mask) {
+      //unknown_led.set(8000);
+    }
+  }
+
+  if (command.extract(CMD_SLEEPY, & mask, sizeof(mask))) {
+    sleepy_devs = mask;
+    if (mask) {
+      //unknown_led.set(8000);
+    }
+  }
+
+  if (!(command.get_ack()))
+    return 0;
+  
+  Message response(command.get_mid(), GATEWAY_ID);
+
+  sensors.requestTemperatures(); // Send the command to get temperatures
+  const float ft = sensors.getTempCByIndex(0);
+  const uint16_t t = int(ft * 100);
+  response.append(PRESENT_TEMP, & t, sizeof(t));
+
+  const uint8_t c = spare_packets();
+  response.append(PRESENT_PACKET_COUNT, & c, sizeof(c));
+
+  to_host(GATEWAY_ID, (uint8_t*) response.data(), response.size());
+
+  return 1;
+}
+
+    /*
+     *  Send Debug message
+    */
+
+void tx_debug(const char* h)
+{
+    // NOTE : CRASHES HOST PARSER!
+    to_host(-1, (uint8_t*) h, (int) strlen(h));
 }
 
     /*
