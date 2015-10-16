@@ -220,6 +220,12 @@ static void packet_to_host(void)
   to_host((int) rf12_hdr, (uint8_t*) rf12_data, (int) rf12_len);
 }
 
+void host_debug(const char* s)
+{
+    // NOTE : currently crashes the host code.
+    to_host(123, (uint8_t*) s, strlen(s));
+}
+
  /*
   *
   */
@@ -239,6 +245,10 @@ static bool is_sleepy(uint8_t dev)
 
 // 'present' flags
 #define PRESENT_TEMP 0x01
+#define PRESENT_PACKET_COUNT 0x02
+
+
+  static uint8_t count_packets();
 
 static int decode_command(uint8_t* data, int length)
 {
@@ -272,19 +282,25 @@ static int decode_command(uint8_t* data, int length)
   const uint16_t t = int(ft * 100);
   response.append(PRESENT_TEMP, & t, sizeof(t));
 
+  const uint8_t c = count_packets();
+  response.append(PRESENT_PACKET_COUNT, & c, sizeof(c));
+
   to_host(GATEWAY_ID, (uint8_t*) response.data(), response.size());
 
   return 1;
 }
 
-#define MAX_PACKETS 4
-static Parser parser;
-static Packet packets[MAX_PACKETS];
-static uint8_t host_idx = 0;
-static Packet* host_packet = & packets[host_idx];
+    /*
+    * Packet management
+    */
 
-static Packet* next_packet(bool not_sleepy=true)
+#define MAX_PACKETS 4
+static Packet packets[MAX_PACKETS];
+static Packet* host_packet = & packets[0];
+
+static Packet* next_tx_packet(bool not_sleepy=true)
 {
+    // Find an allocated packet to send next
     for (int i = 0; i < MAX_PACKETS; ++i) {
         if (not_sleepy && is_sleepy(i))
             continue;
@@ -299,6 +315,7 @@ static Packet* next_packet(bool not_sleepy=true)
 
 static Packet* get_packet(uint8_t dev)
 {
+    // Find a packet allocated to dev
     for (int i = 0; i < MAX_PACKETS; ++i) {
         Packet* p = & packets[i];
         if (p == host_packet)
@@ -309,17 +326,41 @@ static Packet* get_packet(uint8_t dev)
     return 0;
 }
 
+static uint8_t count_packets()
+{
+    uint8_t count = 0;
+    // Find a packet allocated to dev
+    for (int i = 0; i < MAX_PACKETS; ++i) {
+        Packet* p = & packets[i];
+        if (p == host_packet)
+            continue;
+        if (p->node)
+            count++;
+    }
+    return count;
+}
+
 static Packet* next_host_packet()
 {
-    //  TODO : Need better buffer than this!
-    host_idx += 1;
-    host_idx %= MAX_PACKETS;
-    return & packets[host_idx];
+    // Allocated a packet for the host communication.
+    Packet* p = get_packet(0); // any unused packet
+    if (p)
+        return p;
+
+    // Need to overwrite an allocated packet.
+    host_debug("overwrite!");
+    unknown_led.set(40);
+    p = host_packet + 1;
+    if (p >= & packets[MAX_PACKETS])
+        p = & packets[0];
+    return p;
 }
 
  /*
   *
   */
+
+static Parser parser;
 
 void setup () {
   Serial.begin(57600);
@@ -394,7 +435,6 @@ void tx_debug(const char* h)
   */
 
 void loop () {
- 
   // Flash the lights
   if (ledTimer.poll(25))
   {
@@ -416,33 +456,33 @@ void loop () {
     }
   }
 
+  // Process any pending ACK Requests
   uint8_t mid;
   const uint8_t dev = get_next_ack(& mid);
   if (dev) {
     if (rf12_canSend()) {
-      // send ack back
-      tx.set(FLASH_PERIOD);
- 
-      Message msg(mid, dev);
- 
-      if (unknown_devs & (1<<dev)) {
-        msg.set_admin();
-      }
-
       if (is_sleepy(dev)) {
           // send any queued messages
           Packet* pm = get_packet(dev);
           if (pm) {
-              unknown_led.set(10);
-
+              tx.set(FLASH_PERIOD);
               rf12_sendStart(pm->node, pm->data, pm->length);
               pm->reset();
               // TODO : notify host that packet was sent?
               return;
           }
       }
+
+      // ACK with an empty message
+      Message msg(mid, dev);
  
+      // Set IDENTIFY request if node is unknown
+      if (unknown_devs & (1<<dev)) {
+        msg.set_admin();
+      }
+
       // Send ACK packet
+      tx.set(FLASH_PERIOD);
       rf12_sendStart(dev, msg.data(), msg.size());
       clear_ack(dev);
     }    
@@ -450,7 +490,7 @@ void loop () {
   }
 
   // read from host rx buffers
-  Packet* pm = next_packet();
+  Packet* pm = next_tx_packet();
   if (pm) {
     if (is_sleepy(pm->node)) {
         // keep packet in queue to send to sleepy node
@@ -458,7 +498,6 @@ void loop () {
         if (rf12_canSend()) {
           // transmit waiting message
           tx.set(FLASH_PERIOD);
-     
           rf12_sendStart(pm->node, pm->data, pm->length);
           pm->reset();
         }
@@ -470,6 +509,7 @@ void loop () {
   if (Serial.available()) {
     if (parser.parse(host_packet, Serial.read())) {
       status_led.set(FLASH_PERIOD);
+ 
       if (host_packet->node == GATEWAY_ID) {
         // it is for me!!
         decode_command(host_packet->data, host_packet->length);
