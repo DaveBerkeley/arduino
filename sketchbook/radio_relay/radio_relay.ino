@@ -204,11 +204,12 @@ public:
     set_led(OK, true);
     const uint8_t a = msg->get_admin();
     const uint8_t f = msg->get_flags();
-    Serial.print("on message ");
+    Serial.print(millis());
+    Serial.print(" on message ");
     Serial.print(a);
     Serial.print(" ");
     Serial.print(f);
-    Serial.print("\n");
+    Serial.print("\r\n");
     
     bool r;
     if (msg->extract(PRESENT_STATE, & r, sizeof(r)))
@@ -216,7 +217,7 @@ public:
       set_relay(r);
       Serial.print("set relay ");
       Serial.print(r);
-      Serial.print("\n");
+      Serial.print("\r\n");
     }
   }
 
@@ -254,7 +255,7 @@ void loop()
   if (count) {
     if (!--count) {
       count = 500000;
-      Serial.print("req tx\n");
+      Serial.print("req tx\r\n");
       radio.req_tx_message();
     }
   }
