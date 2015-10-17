@@ -302,7 +302,6 @@ static Packet* next_host_packet()
         return p;
 
     // Need to overwrite an allocated packet.
-    //tx_debug("overwrite!");
     unknown_led.set(10);
     p = host_packet + 1;
     if (p >= & packets[MAX_PACKETS])
@@ -360,6 +359,17 @@ static int decode_command(uint8_t* data, int length)
   to_host(GATEWAY_ID, (uint8_t*) response.data(), response.size());
 
   return 1;
+}
+
+static void ack_packet_send()
+{
+  // Inform host of packet send status
+  Message msg(make_mid(), GATEWAY_ID);
+
+  const uint8_t c = spare_packets();
+  msg.append(PRESENT_PACKET_COUNT, & c, sizeof(c));
+
+  to_host(GATEWAY_ID, (uint8_t*) msg.data(), msg.size());
 }
 
     /*
@@ -483,7 +493,8 @@ void loop () {
               rf12_sendStart(pm->node, pm->data, pm->length);
               pm->reset();
               clear_ack(dev);
-              // TODO : notify host that packet was sent?
+              // notify host that packet was sent
+              ack_packet_send();
               return;
           }
       }
