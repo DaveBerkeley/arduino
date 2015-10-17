@@ -322,10 +322,6 @@ static Packet* next_host_packet()
 #define PRESENT_TEMP            (1<<0)
 #define PRESENT_PACKET_COUNT    (1<<1)
 
-
-// TODO : move code about to remove need for declaration
-static uint8_t spare_packets();
-
 static int decode_command(uint8_t* data, int length)
 {
   Message command((void*) data);
