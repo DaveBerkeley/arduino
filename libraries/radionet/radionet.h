@@ -23,14 +23,13 @@ private:
 public:
 
   enum {
-    ACK = 0x8000,   // set if ACK is required
-    ADMIN = 0x4000, // set if 'hello' requested
-  };
-
-  // Data Payloads
-  enum {
-    TEXT = 0x2000,
-    USER_MASK = 0x1FFF,
+    ACK             = 0x8000,   // set if ACK is required
+    ADMIN           = 0x4000,   // set if 'hello' requested
+    // Data Payloads
+    TEXT            = 0x2000,   // payload is 'ident' string
+    //NOT_SUPPORTED   = 0x1000,   // unsupported command error
+    FLASH           = 0x0800,   // payload is FLASH message
+    USER_MASK       = 0x7FF,    // Mask for device specific messages
   };
 
   Message(int msg_id, int dest)
@@ -126,6 +125,11 @@ public:
   void* data()
   {
     return & m_msg;
+  }
+
+  void* payload()
+  {
+    return & m_msg.m_data;
   }
 };
 
