@@ -43,11 +43,7 @@ enum FLASH_CMD {
 };
 
 typedef struct {
-    FLASH_CMD   cmd;
-}   FlashHeader;
-
-typedef struct {
-    FlashHeader hdr;
+    uint8_t     cmd;
     uint16_t    blocks;
     uint16_t    block_size;
 }   FlashInfo;
@@ -66,7 +62,7 @@ bool flash_init()
      *
      */
 
-void send_message(const void* data, int length)
+void send_flash_message(const void* data, int length)
 {
     Message msg(make_mid(), GATEWAY_ID);
 
@@ -81,12 +77,16 @@ void send_message(const void* data, int length)
 bool flash_req_handler(Message* msg)
 {
     //  If msg is a flash request, handle it
-    if (!(msg->get_flags() & Message::FLASH))
+    uint8_t cmd = 0;
+    if (!msg->extract(Message::FLASH, & cmd, sizeof(cmd))) {
         return false;
+    }
 
-    const FlashHeader* hdr = (FlashHeader*) msg->payload();    
+    Serial.print("flash(");
+    Serial.print(cmd);
+    Serial.print(")\r\n");
 
-    switch (hdr->cmd) {
+    switch (cmd) {
         case FLASH_REBOOT   : {
             //  TODO
             break;
@@ -94,11 +94,12 @@ bool flash_req_handler(Message* msg)
         case FLASH_INFO_REQ   : {
             FlashInfo info;
 
-            info.hdr.cmd = FLASH_INFO;
+            info.cmd = FLASH_INFO;
             info.blocks = 1024;
             info.block_size = 256;
 
-            send_message(& info, sizeof(info));
+            Serial.print("flash_info_req\r\n");
+            send_flash_message(& info, sizeof(info));
             break;
         }
         case FLASH_CLEAR :

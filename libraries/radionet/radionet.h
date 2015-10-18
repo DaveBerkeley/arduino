@@ -129,7 +129,7 @@ public:
 
   void* payload()
   {
-    return & m_msg.m_data;
+    return m_next;
   }
 };
 
