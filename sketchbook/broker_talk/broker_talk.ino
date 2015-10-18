@@ -302,7 +302,8 @@ static Packet* next_host_packet()
         return p;
 
     // Need to overwrite an allocated packet.
-    unknown_led.set(10);
+    //tx_debug("overwrite!");
+    //unknown_led.set(10);
     p = host_packet + 1;
     if (p >= & packets[MAX_PACKETS])
         p = & packets[0];
@@ -325,14 +326,14 @@ static int decode_command(uint8_t* data, int length)
 {
   Message command((void*) data);
 
-  //unknown_led.set(0);
+  unknown_led.set(0);
 
   // Check for unknown device bitmap
   uint32_t mask;
   if (command.extract(CMD_UNKNOWN, & mask, sizeof(mask))) {
     unknown_devs = mask;
     if (mask) {
-      //unknown_led.set(8000);
+      unknown_led.set(8000);
     }
   }
 
