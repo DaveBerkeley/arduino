@@ -22,6 +22,7 @@
 
 #include <radiodev.h>
 #include <radioutils.h>
+#include <flash.h>
 
 #include <OneWire.h>
 #include <DallasTemperature.h>
@@ -38,8 +39,8 @@ EMPTY_INTERRUPT(WDT_vect);
   */
   
 // Data wire
-#define ONE_WIRE_BUS 5 // jeenode port 1 digital pin
-#define PULLUP_PIN A1  // jeenode port 1 analog pin
+#define ONE_WIRE_BUS 5 // jeenode port 2 digital pin
+#define PULLUP_PIN A1  // jeenode port 2 analog pin
 
 // Setup a oneWire instance to communicate with any OneWire devices (not just Maxim/Dallas temperature ICs)
 OneWire oneWire(ONE_WIRE_BUS);
@@ -172,6 +173,8 @@ public:
     
     init_leds();
     set_relay(0);
+
+    flash_init();
   }
 
   virtual const char* banner()
@@ -201,23 +204,26 @@ public:
 
   virtual void on_message(Message* msg)
   {
+    if (flash_req_handler(msg))
+        return;
+
     set_led(OK, true);
     const uint8_t a = msg->get_admin();
     const uint8_t f = msg->get_flags();
     Serial.print(millis());
-    Serial.print(" on message ");
+    Serial.print(" msg(");
     Serial.print(a);
-    Serial.print(" ");
+    Serial.print(",");
     Serial.print(f);
-    Serial.print("\r\n");
+    Serial.print(")\r\n");
     
     bool r;
     if (msg->extract(PRESENT_STATE, & r, sizeof(r)))
     {
       set_relay(r);
-      Serial.print("set relay ");
+      Serial.print("set_relay(");
       Serial.print(r);
-      Serial.print("\r\n");
+      Serial.print(")\r\n");
     }
   }
 
