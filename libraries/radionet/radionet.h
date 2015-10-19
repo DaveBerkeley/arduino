@@ -4,6 +4,9 @@
 #define GATEWAY_ID 31
 
 class Message {
+public:
+    const static int DATA_SIZE = 64;
+private:
   typedef struct {
     uint8_t m_id;       // non-zero message id
     uint8_t m_dest;     // destination node address
@@ -12,7 +15,7 @@ class Message {
 
   typedef struct {
     header m_hdr;
-    uint8_t m_data[50];
+    uint8_t m_data[DATA_SIZE];
   }  message;
 
 private:

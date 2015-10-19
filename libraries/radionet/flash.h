@@ -17,7 +17,9 @@
  USA
 */
 
-bool flash_init();
+class MemoryPlug;
+
+bool flash_init(MemoryPlug* mem, bool verbose);
 
 class Message;
 

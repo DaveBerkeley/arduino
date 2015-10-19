@@ -141,6 +141,10 @@ static void init_leds()
   *
   */
 
+// JeeLib Memory Plug handling
+static PortI2C i2cBus(1);
+static MemoryPlug mem(i2cBus);
+
 class RadioRelay : public RadioDev
 {
   bool m_on;
@@ -174,7 +178,7 @@ public:
     init_leds();
     set_relay(0);
 
-    flash_init();
+    flash_init(& mem, true);
   }
 
   virtual const char* banner()
