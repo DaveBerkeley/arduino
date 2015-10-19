@@ -30,16 +30,16 @@
 
 enum FLASH_CMD {
     FLASH_INFO_REQ = 1,
-    FLASH_INFO,
-    FLASH_CLEAR,
-    FLASH_CLEARED,
-    FLASH_WRITE,
-    FLASH_WRITTEN,
-    FLASH_CRC_REQ,
-    FLASH_CRC,
-    FLASH_READ_REQ,
-    FLASH_READ,
-    FLASH_REBOOT,
+    FLASH_INFO = 2,
+    FLASH_CLEAR = 3,
+    FLASH_CLEARED = 4,
+    FLASH_WRITE = 5,
+    FLASH_WRITTEN = 6,
+    FLASH_CRC_REQ = 7,
+    FLASH_CRC = 8,
+    FLASH_READ_REQ = 9,
+    FLASH_READ = 10,
+    FLASH_REBOOT = 11,
 };
 
 typedef struct {
@@ -47,6 +47,34 @@ typedef struct {
     uint16_t    blocks;
     uint16_t    block_size;
 }   FlashInfo;
+
+typedef struct {
+    uint8_t     cmd;
+    uint16_t    block;
+}   FlashBlock;
+
+typedef FlashBlock FlashClear;
+typedef FlashBlock FlashCleared;
+typedef FlashBlock FlashCrcReq;
+
+typedef struct {
+    uint8_t     cmd;
+    uint16_t    block;
+    uint16_t    crc;
+}   FlashCrc;
+
+typedef struct {
+    uint8_t     cmd;
+    uint16_t    addr;
+    uint16_t    bytes;
+    uint8_t     data[0];
+}   FlashWrite;
+
+typedef struct {
+    uint8_t     cmd;
+    uint16_t    addr;
+    uint16_t    bytes;
+}   FlashWritten;
 
     /*
      *
@@ -76,24 +104,19 @@ void send_flash_message(const void* data, int length)
 
 bool flash_req_handler(Message* msg)
 {
+    const uint8_t* payload = (uint8_t*) msg->payload();
+
     //  If msg is a flash request, handle it
     uint8_t cmd = 0;
     if (!msg->extract(Message::FLASH, & cmd, sizeof(cmd))) {
         return false;
     }
 
-    Serial.print("flash(");
-    Serial.print(cmd);
-    Serial.print(")\r\n");
-
     switch (cmd) {
-        case FLASH_REBOOT   : {
-            //  TODO
-            break;
-        }
         case FLASH_INFO_REQ   : {
             FlashInfo info;
 
+            // TODO : READ FLASH INFO
             info.cmd = FLASH_INFO;
             info.blocks = 1024;
             info.block_size = 256;
@@ -102,9 +125,59 @@ bool flash_req_handler(Message* msg)
             send_flash_message(& info, sizeof(info));
             break;
         }
-        case FLASH_CLEAR :
-        case FLASH_WRITE :
-        case FLASH_CRC_REQ :
+        case FLASH_CLEAR : {
+            FlashClear* fc = (FlashClear*) payload;
+            FlashCleared info;
+
+            // TODO : CLEAR FLASH
+            info.cmd = FLASH_CLEARED;
+            info.block = fc->block;
+
+            Serial.print("flash_clear(");
+            Serial.print(info.block);
+            Serial.print(")\r\n");
+            send_flash_message(& info, sizeof(info));
+            break;
+        }
+        case FLASH_CRC_REQ : {
+            FlashCrcReq* fc = (FlashCrcReq*) payload;
+            FlashCrc info;
+
+            // TODO : FLASH CRC
+            info.cmd = FLASH_CRC;
+            info.block = fc->block;
+            info.crc = 1234;
+
+            Serial.print("flash_crc(");
+            Serial.print(info.block);
+            Serial.print(",");
+            Serial.print(info.crc);
+            Serial.print(")\r\n");
+            send_flash_message(& info, sizeof(info));
+            break;
+        }
+        case FLASH_REBOOT   : {
+            Serial.print("flash_reboot()\r\n");
+            // TODO : REBOOT
+            break;
+        }
+        case FLASH_WRITE : {
+            FlashWrite* fc = (FlashWrite*) payload;
+            FlashWritten info;
+
+            // TODO : FLASH WRITE
+            info.cmd = FLASH_WRITTEN;
+            info.addr = fc->addr;
+            info.bytes = fc->bytes;
+
+            Serial.print("flash_write(");
+            Serial.print(info.addr);
+            Serial.print(",");
+            Serial.print(info.bytes);
+            Serial.print(")\r\n");
+            send_flash_message(& info, sizeof(info));
+            break;
+        }
         case FLASH_READ_REQ :
         // Don't implement these on node :
         case FLASH_CLEARED :
@@ -113,6 +186,9 @@ bool flash_req_handler(Message* msg)
         case FLASH_WRITTEN :
         case FLASH_INFO :
         default :   {
+            Serial.print("unknown flash(");
+            Serial.print(cmd);
+            Serial.print(")\r\n");
             // Not implemented or unrecognised
             return false;
         }

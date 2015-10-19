@@ -204,9 +204,6 @@ public:
 
   virtual void on_message(Message* msg)
   {
-    if (flash_req_handler(msg))
-        return;
-
     set_led(OK, true);
     const uint8_t a = msg->get_admin();
     const uint8_t f = msg->get_flags();
@@ -217,6 +214,9 @@ public:
     Serial.print(f);
     Serial.print(")\r\n");
     
+    if (flash_req_handler(msg))
+        return;
+
     bool r;
     if (msg->extract(PRESENT_STATE, & r, sizeof(r)))
     {
