@@ -356,6 +356,8 @@ static int decode_command(uint8_t* data, int length)
 
   const uint8_t c = spare_packets();
   response.append(PRESENT_PACKET_COUNT, & c, sizeof(c));
+  const uint16_t d = MAX_DATA;
+  response.append(0, & d, sizeof(d));
 
   to_host(GATEWAY_ID, (uint8_t*) response.data(), response.size());
 
