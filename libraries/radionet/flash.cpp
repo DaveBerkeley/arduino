@@ -33,7 +33,12 @@
 #include "radionet.h"
 
 static MemoryPlug* mem;
+
+#define ALLOW_VERBOSE
+
+#if defined(ALLOW_VERBOSE)
 static bool verbose;
+#endif // ALLOW_VERBOSE
 
     /*
      *  Command Interface
@@ -53,7 +58,7 @@ enum FLASH_CMD {
     FLASH_REBOOT = 11,
 };
 
-#define MAX_DATA 128
+#define MAX_DATA 32
 
 typedef struct {
     uint8_t     cmd;
@@ -63,17 +68,13 @@ typedef struct {
 
 typedef struct {
     uint8_t     cmd;
-    uint16_t    block;
-}   FlashBlock;
-
-typedef FlashBlock FlashClear;
-typedef FlashBlock FlashCleared;
-
-typedef struct {
-    uint8_t     cmd;
     uint16_t    addr;
     uint16_t    bytes;
 }   FlashAddress;
+
+typedef FlashAddress FlashCrcReq;
+typedef FlashAddress FlashWritten;
+typedef FlashAddress FlashReadReq;
 
 typedef struct {
     uint8_t     cmd;
@@ -82,17 +83,12 @@ typedef struct {
     uint16_t    crc;
 }   FlashCrc;
 
-typedef FlashAddress FlashCrcReq;
-
 typedef struct {
     uint8_t     cmd;
     uint16_t    addr;
     uint16_t    bytes;
     uint8_t     data[0];
 }   FlashWrite;
-
-typedef FlashAddress FlashWritten;
-typedef FlashAddress FlashReadReq;
 
 typedef struct {
     uint8_t     cmd;
@@ -105,6 +101,7 @@ typedef struct {
      *
      */
 
+#if defined(ALLOW_VERBOSE)
 void show_block(const uint8_t* data, uint16_t len)
 {
     for (uint16_t i = 0; i < len; ++i) {
@@ -116,12 +113,17 @@ void show_block(const uint8_t* data, uint16_t len)
     }
     Serial.print("\r\n");
 }
+#else
+#define show_block(x, y)
+#endif
 
 static FlashInfo flash_info = { FLASH_INFO, };
 
 bool flash_init(MemoryPlug* m, bool v)
 {
+#if defined(ALLOW_VERBOSE)
     verbose = v;
+#endif
     mem = m;
 
     if (!mem)
@@ -130,42 +132,130 @@ bool flash_init(MemoryPlug* m, bool v)
     if (!mem->isPresent())
         return false;
  
+#if defined(ALLOW_VERBOSE)
     if (verbose) {
         Serial.print("flash_init()\r\n");
-
-        uint8_t buff[64];
-        mem->load(0, 0, buff, sizeof(buff));
-        show_block(buff, sizeof(buff));
     }
+#endif
 
+    // How to find this out from the memory device?
     flash_info.blocks = (128 * 1024L) / 256;
     flash_info.block_size = 256;
 
     return true;
 }
 
-// save(page, offset, bytes, count);
-static void save(uint16_t addr, uint16_t bytes, uint8_t* data)
+    /*
+     *  Block Iterator to handle Flash page boundaries.
+     */
+
+typedef void (*b_iter)(void* obj, uint16_t block, uint16_t offset, uint16_t bytes, uint8_t* data);
+
+static void block_iter(void* obj, uint16_t addr, uint16_t bytes, uint8_t* data, b_iter fn)
 {
-    //  TODO : calculate block / offset etc.
-    show_block(data, bytes);
-    mem->save(0, addr, data, bytes);
+    //  calculate block / offset etc.
+    while (bytes) {
+        const uint16_t bsize = flash_info.block_size;
+        const uint16_t block = addr / bsize;
+        const uint16_t offset = addr % bsize;
+        const uint16_t size = min(bytes, bsize - offset);
+
+        if (block >= flash_info.blocks)
+            return;
+
+        fn(obj, block, offset, size, data);
+
+        data += size;
+        bytes -= size;
+        addr += size;
+    }
+} 
+
+    /*
+     *  Save data to Flash
+     */
+
+static void saver(void* obj, uint16_t block, uint16_t offset, uint16_t bytes, uint8_t* data)
+{
+    uint16_t* xfered = (uint16_t*) obj;
+
+#if defined(ALLOW_VERBOSE)
+    if (verbose) {
+        char buff[24];
+        snprintf(buff, sizeof(buff), "save(%d,%d,%d)\r\n", block, offset, bytes);
+        Serial.print(buff);
+    }
+#endif // ALLOW_VERBOSE
+
+    mem->save(block, offset, data, bytes);
+    *xfered += bytes;
+}
+
+static void save(uint16_t* xfered, uint16_t addr, uint16_t bytes, uint8_t* data)
+{
+    //show_block(data, bytes);
+    block_iter(xfered, addr, bytes, data, saver);
+}
+
+    /*
+     *  CRC a block of Flash
+     */
+
+#define crc_calc _crc_xmodem_update
+
+static void crcer(void* obj, uint16_t block, uint16_t offset, uint16_t bytes, uint8_t*) {
+    uint8_t buff[bytes];
+
+#if defined(ALLOW_VERBOSE)
+    if (verbose) {
+        char buff[24];
+        snprintf(buff, sizeof(buff), "crcer(%d,%d,%d)\r\n", block, offset, bytes);
+        Serial.print(buff);
+    }
+#endif // ALLOW_VERBOSE
+
+    mem->load(block, offset, buff, bytes);
+
+    uint16_t* crc = (uint16_t*) obj;
+    for (uint16_t i = 0; i < bytes; ++i) {
+        *crc = crc_calc(*crc, buff[i]);
+    }
 }
 
 static uint16_t get_crc(uint16_t addr, uint16_t bytes) {
     uint16_t crc = 0;
-
-    while (bytes--) {
-        uint8_t c;
-        // TODO : calculate block offsets etc.
-        mem->load(0, addr++, & c, 1);
-        crc = _crc_xmodem_update(crc, c);
-    }
+    block_iter(& crc, addr, bytes, 0, crcer);
     return crc;
 }
 
     /*
-     *
+     *  Read data from Flash
+     */
+
+static void reader(void* obj, uint16_t block, uint16_t offset, uint16_t bytes, uint8_t* data)
+{
+    uint16_t* xfered = (uint16_t*) obj;
+
+#if defined(ALLOW_VERBOSE)
+    if (verbose) {
+        char buff[24];
+        snprintf(buff, sizeof(buff), "read(%d,%d,%d)\r\n", block, offset, bytes);
+        Serial.print(buff);
+    }
+#endif // ALLOW_VERBOSE
+
+    mem->load(block, offset, data, bytes);
+    show_block(data, bytes);
+    *xfered += bytes;
+}
+
+static void read(uint16_t* xfered, uint16_t addr, uint16_t bytes, uint8_t* data, uint16_t max_size)
+{
+    block_iter(xfered, addr, min(bytes, max_size), data, reader);
+}
+
+    /*
+     *  Send a FLASH message to the Gateway.
      */
 
 void send_flash_message(const void* data, int length)
@@ -177,7 +267,7 @@ void send_flash_message(const void* data, int length)
 }
 
     /*
-     *
+     *  Flash Message handler.
      */
 
 bool flash_req_handler(Message* msg)
@@ -196,9 +286,11 @@ bool flash_req_handler(Message* msg)
 
     switch (cmd) {
         case FLASH_INFO_REQ   : {
+#if defined(ALLOW_VERBOSE)
             if (verbose) {
                 Serial.print("flash_info_req()\r\n");
             }
+#endif // ALLOW_VERBOSE
             send_flash_message(& flash_info, sizeof(flash_info));
             break;
         }
@@ -211,17 +303,21 @@ bool flash_req_handler(Message* msg)
             info.bytes = fc->bytes;
             info.crc = get_crc(fc->addr, fc->bytes);
 
+#if defined(ALLOW_VERBOSE)
             if (verbose) {
                 char buff[32];
                 snprintf(buff, sizeof(buff), "flash_crc(%d,%d,%X)\r\n", info.addr, info.bytes, info.crc);
                 Serial.print(buff);
             }
+#endif // ALLOW_VERBOSE
 
             send_flash_message(& info, sizeof(info));
             break;
         }
         case FLASH_REBOOT   : {
+#if defined(ALLOW_VERBOSE)
             Serial.print("flash_reboot()\r\n");
+#endif // ALLOW_VERBOSE
             // TODO : REBOOT
             break;
         }
@@ -229,18 +325,20 @@ bool flash_req_handler(Message* msg)
             FlashWrite* fc = (FlashWrite*) payload;
             FlashWritten info;
 
-            // Do the write
-            save(fc->addr, fc->bytes, fc->data);
-
             info.cmd = FLASH_WRITTEN;
             info.addr = fc->addr;
-            info.bytes = fc->bytes;
+            info.bytes = 0;
 
+            // Do the write
+            save(& info.bytes, fc->addr, fc->bytes, fc->data);
+
+#if defined(ALLOW_VERBOSE)
             if (verbose) {
                 char buff[24];
                 snprintf(buff, sizeof(buff), "flash_write(%d,%d)\r\n", info.addr, info.bytes);
                 Serial.print(buff);
             }
+#endif // ALLOW_VERBOSE
 
             send_flash_message(& info, sizeof(info));
             break;
@@ -249,11 +347,14 @@ bool flash_req_handler(Message* msg)
             FlashReadReq* fc = (FlashReadReq*) payload;
             FlashRead info;
 
-            // TODO : FLASH READ
+            // FLASH READ
             info.cmd = FLASH_READ;
             info.addr = fc->addr;
-            info.bytes = fc->bytes;
+            info.bytes = 0;
 
+            read(& info.bytes, fc->addr, fc->bytes, info.data, sizeof(info.data));
+    
+#if defined(ALLOW_VERBOSE)
             if (verbose) {
                 Serial.print("flash_read_req(");
                 Serial.print(info.addr);
@@ -261,8 +362,9 @@ bool flash_req_handler(Message* msg)
                 Serial.print(info.bytes);
                 Serial.print(")\r\n");
             }
+#endif // ALLOW_VERBOSE
 
-            send_flash_message(& info, sizeof(info));
+            send_flash_message(& info, sizeof(FlashReadReq) + info.bytes);
             break;
         }
         // Don't implement these on node :
@@ -271,11 +373,13 @@ bool flash_req_handler(Message* msg)
         case FLASH_WRITTEN :
         case FLASH_INFO :
         default :   {
+#if defined(ALLOW_VERBOSE)
             if (verbose) {
                 Serial.print("unknown flash(");
                 Serial.print(cmd);
                 Serial.print(")\r\n");
             }
+#endif // ALLOW_VERBOSE
             // Not implemented or unrecognised
             return false;
         }
