@@ -58,13 +58,14 @@ enum FLASH_CMD {
     FLASH_REBOOT = 11,
 };
 
-#define MAX_DATA 32
-
 typedef struct {
     uint8_t     cmd;
     uint16_t    blocks;
     uint16_t    block_size;
+    uint16_t    packet_size;
 }   FlashInfo;
+
+#define MAX_DATA (64 + sizeof(FlashInfo))
 
 typedef struct {
     uint8_t     cmd;
@@ -141,6 +142,7 @@ bool flash_init(MemoryPlug* m, bool v)
     // How to find this out from the memory device?
     flash_info.blocks = (128 * 1024L) / 256;
     flash_info.block_size = 256;
+    flash_info.packet_size = sizeof(FlashRead::data);
 
     return true;
 }
