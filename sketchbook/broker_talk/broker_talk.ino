@@ -322,6 +322,14 @@ static Packet* next_host_packet()
 #define PRESENT_TEMP            (1<<0)
 #define PRESENT_PACKET_COUNT    (1<<1)
 
+static void add_packet_info(Message* msg)
+{
+    const uint8_t c = spare_packets();
+    msg->append(PRESENT_PACKET_COUNT, & c, sizeof(c));
+    const uint16_t d = MAX_DATA;
+    msg->append(0, & d, sizeof(d));
+}
+
 static int decode_command(uint8_t* data, int length)
 {
   Message command((void*) data);
@@ -354,10 +362,7 @@ static int decode_command(uint8_t* data, int length)
   const uint16_t t = int(ft * 100);
   response.append(PRESENT_TEMP, & t, sizeof(t));
 
-  const uint8_t c = spare_packets();
-  response.append(PRESENT_PACKET_COUNT, & c, sizeof(c));
-  const uint16_t d = MAX_DATA;
-  response.append(0, & d, sizeof(d));
+  add_packet_info(& response);
 
   to_host(GATEWAY_ID, (uint8_t*) response.data(), response.size());
 
@@ -368,10 +373,7 @@ static void ack_packet_send()
 {
   // Inform host of packet send status
   Message msg(make_mid(), GATEWAY_ID);
-
-  const uint8_t c = spare_packets();
-  msg.append(PRESENT_PACKET_COUNT, & c, sizeof(c));
-
+  add_packet_info(& msg);
   to_host(GATEWAY_ID, (uint8_t*) msg.data(), msg.size());
 }
 
