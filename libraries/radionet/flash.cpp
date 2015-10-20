@@ -48,8 +48,6 @@ static bool verbose;
 enum FLASH_CMD {
     FLASH_INFO_REQ = 1,
     FLASH_INFO = 2,
-    //FLASH_CLEAR = 3,
-    //FLASH_CLEARED = 4,
     FLASH_WRITE = 5,
     FLASH_WRITTEN = 6,
     FLASH_CRC_REQ = 7,
@@ -57,6 +55,7 @@ enum FLASH_CMD {
     FLASH_READ_REQ = 9,
     FLASH_READ = 10,
     FLASH_REBOOT = 11,
+    FLASH_SET_FAST_POLL = 12,
 };
 
 typedef struct {
@@ -66,7 +65,11 @@ typedef struct {
     uint16_t    packet_size;
 }   FlashInfo;
 
-#define MAX_DATA (48 + sizeof(FlashInfo))
+#define MAX_DATA (52 + sizeof(FlashInfo))
+
+typedef struct {
+    uint8_t     poll;
+}   FlashFastPoll;
 
 typedef struct {
     uint8_t     cmd;
@@ -99,6 +102,17 @@ typedef struct {
     uint16_t    bytes;
     uint8_t     data[MAX_DATA - sizeof(FlashReadReq)];
 }   FlashRead;
+
+static bool fast_poll = false;
+
+    /*
+     *
+     */
+
+bool flash_fast_poll()
+{
+    return fast_poll;
+}
 
     /*
      *
@@ -374,6 +388,18 @@ bool flash_req_handler(Message* msg)
 #endif // ALLOW_VERBOSE
 
             send_flash_message(& info, sizeof(FlashReadReq) + info.bytes);
+            break;
+        }
+        case FLASH_SET_FAST_POLL : {
+            FlashFastPoll* fc = (FlashFastPoll*) payload;
+            fast_poll = fc->poll;
+#if defined(ALLOW_VERBOSE)
+            if (verbose) {
+                Serial.print("set_fast_poll(");
+                Serial.print(fast_poll);
+                Serial.print(")\r\n");
+            }
+#endif // ALLOW_VERBOSE
             break;
         }
         // Don't implement these on node :

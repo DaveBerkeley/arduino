@@ -264,7 +264,7 @@ void loop()
   
   if (count) {
     if (!--count) {
-      count = 500000;
+      count = flash_fast_poll() ? 50000 : 500000;
       Serial.print("req tx\r\n");
       radio.req_tx_message();
     }

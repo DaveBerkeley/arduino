@@ -25,4 +25,6 @@ class Message;
 
 bool flash_req_handler(Message* msg);
 
+bool flash_fast_poll();
+
 // FIN
