@@ -65,7 +65,7 @@ typedef struct {
     uint16_t    packet_size;
 }   FlashInfo;
 
-#define MAX_DATA (64 + sizeof(FlashInfo))
+#define MAX_DATA (48 + sizeof(FlashInfo))
 
 typedef struct {
     uint8_t     cmd;
@@ -203,7 +203,8 @@ static void save(uint16_t* xfered, uint32_t addr, uint16_t bytes, uint8_t* data)
      *  CRC a block of Flash
      */
 
-#define crc_calc _crc_xmodem_update
+//#define crc_calc _crc_xmodem_update
+#define crc_calc _crc16_update
 
 static void crcer(void* obj, uint16_t block, uint16_t offset, uint16_t bytes, uint8_t*) {
     uint8_t buff[bytes];
