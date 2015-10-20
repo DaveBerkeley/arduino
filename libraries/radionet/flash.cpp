@@ -68,7 +68,7 @@ typedef struct {
 
 typedef struct {
     uint8_t     cmd;
-    uint16_t    addr;
+    uint32_t    addr;
     uint16_t    bytes;
 }   FlashAddress;
 
@@ -78,21 +78,21 @@ typedef FlashAddress FlashReadReq;
 
 typedef struct {
     uint8_t     cmd;
-    uint16_t    addr;
+    uint32_t    addr;
     uint16_t    bytes;
     uint16_t    crc;
 }   FlashCrc;
 
 typedef struct {
     uint8_t     cmd;
-    uint16_t    addr;
+    uint32_t    addr;
     uint16_t    bytes;
     uint8_t     data[0];
 }   FlashWrite;
 
 typedef struct {
     uint8_t     cmd;
-    uint16_t    addr;
+    uint32_t    addr;
     uint16_t    bytes;
     uint8_t     data[MAX_DATA - sizeof(FlashReadReq)];
 }   FlashRead;
@@ -151,7 +151,7 @@ bool flash_init(MemoryPlug* m, bool v)
 
 typedef void (*b_iter)(void* obj, uint16_t block, uint16_t offset, uint16_t bytes, uint8_t* data);
 
-static void block_iter(void* obj, uint16_t addr, uint16_t bytes, uint8_t* data, b_iter fn)
+static void block_iter(void* obj, uint32_t addr, uint16_t bytes, uint8_t* data, b_iter fn)
 {
     //  calculate block / offset etc.
     while (bytes) {
@@ -191,7 +191,7 @@ static void saver(void* obj, uint16_t block, uint16_t offset, uint16_t bytes, ui
     *xfered += bytes;
 }
 
-static void save(uint16_t* xfered, uint16_t addr, uint16_t bytes, uint8_t* data)
+static void save(uint16_t* xfered, uint32_t addr, uint16_t bytes, uint8_t* data)
 {
     //show_block(data, bytes);
     block_iter(xfered, addr, bytes, data, saver);
@@ -222,7 +222,7 @@ static void crcer(void* obj, uint16_t block, uint16_t offset, uint16_t bytes, ui
     }
 }
 
-static uint16_t get_crc(uint16_t addr, uint16_t bytes) {
+static uint16_t get_crc(uint32_t addr, uint16_t bytes) {
     uint16_t crc = 0;
     block_iter(& crc, addr, bytes, 0, crcer);
     return crc;
@@ -249,7 +249,7 @@ static void reader(void* obj, uint16_t block, uint16_t offset, uint16_t bytes, u
     *xfered += bytes;
 }
 
-static void read(uint16_t* xfered, uint16_t addr, uint16_t bytes, uint8_t* data, uint16_t max_size)
+static void read(uint16_t* xfered, uint32_t addr, uint16_t bytes, uint8_t* data, uint16_t max_size)
 {
     block_iter(xfered, addr, min(bytes, max_size), data, reader);
 }
@@ -306,7 +306,7 @@ bool flash_req_handler(Message* msg)
 #if defined(ALLOW_VERBOSE)
             if (verbose) {
                 char buff[32];
-                snprintf(buff, sizeof(buff), "flash_crc(%d,%d,%X)\r\n", info.addr, info.bytes, info.crc);
+                snprintf(buff, sizeof(buff), "flash_crc(%ld,%d,%X)\r\n", info.addr, info.bytes, info.crc);
                 Serial.print(buff);
             }
 #endif // ALLOW_VERBOSE
@@ -335,7 +335,7 @@ bool flash_req_handler(Message* msg)
 #if defined(ALLOW_VERBOSE)
             if (verbose) {
                 char buff[24];
-                snprintf(buff, sizeof(buff), "flash_write(%d,%d)\r\n", info.addr, info.bytes);
+                snprintf(buff, sizeof(buff), "flash_write(%ld,%d)\r\n", info.addr, info.bytes);
                 Serial.print(buff);
             }
 #endif // ALLOW_VERBOSE
