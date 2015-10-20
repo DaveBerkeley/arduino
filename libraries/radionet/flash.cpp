@@ -68,6 +68,7 @@ typedef struct {
 #define MAX_DATA (52 + sizeof(FlashInfo))
 
 typedef struct {
+    uint8_t     cmd;
     uint8_t     poll;
 }   FlashFastPoll;
 
