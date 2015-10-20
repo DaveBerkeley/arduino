@@ -74,7 +74,6 @@ typedef struct {
 }   FlashAddress;
 
 typedef FlashAddress FlashCrcReq;
-typedef FlashAddress FlashWritten;
 typedef FlashAddress FlashReadReq;
 
 typedef struct {
@@ -83,6 +82,8 @@ typedef struct {
     uint16_t    bytes;
     uint16_t    crc;
 }   FlashCrc;
+
+typedef FlashCrc FlashWritten;
 
 typedef struct {
     uint8_t     cmd;
@@ -334,6 +335,8 @@ bool flash_req_handler(Message* msg)
 
             // Do the write
             save(& info.bytes, fc->addr, fc->bytes, fc->data);
+            // CRC the EEPROM that we've just written
+            info.crc = get_crc(fc->addr, fc->bytes);            
 
 #if defined(ALLOW_VERBOSE)
             if (verbose) {
