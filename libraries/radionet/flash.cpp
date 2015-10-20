@@ -25,6 +25,7 @@
 #endif
 
 #include <util/crc16.h>
+#include <avr/wdt.h>
 
 // JeeLib memory interface
 #include "Ports.h"
@@ -322,7 +323,9 @@ bool flash_req_handler(Message* msg)
 #if defined(ALLOW_VERBOSE)
             Serial.print("flash_reboot()\r\n");
 #endif // ALLOW_VERBOSE
-            // TODO : REBOOT
+            wdt_enable(WDTO_15MS);
+            noInterrupts();
+            while (true) ;
             break;
         }
         case FLASH_WRITE : {
