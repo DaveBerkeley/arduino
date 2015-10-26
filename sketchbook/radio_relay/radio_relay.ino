@@ -141,6 +141,15 @@ static void init_leds()
   *
   */
 
+static void debug(const char* text)
+{
+  Serial.print(text);
+}
+
+  /*
+  *
+  */
+
 // JeeLib Memory Plug handling
 static PortI2C i2cBus(1);
 static MemoryPlug mem(i2cBus);
@@ -154,6 +163,7 @@ public:
   : RadioDev(GATEWAY_ID, 0),
     m_on(false)
   {
+    set_debug(::debug);
   }
   
   void set_relay(bool state)
@@ -192,7 +202,7 @@ public:
     const float ft = sensors.getTempCByIndex(0);
     const uint16_t t = int(ft * 100);
     msg->append(PRESENT_TEMPERATURE, & t, sizeof(t));
-    
+ 
     // append relay state
     msg->append(PRESENT_STATE, & m_on, sizeof(m_on));
 
@@ -211,13 +221,10 @@ public:
     set_led(OK, true);
     const uint8_t a = msg->get_admin();
     const uint8_t f = msg->get_flags();
-    Serial.print(millis());
-    Serial.print(" msg(");
-    Serial.print(a);
-    Serial.print(",");
-    Serial.print(f);
-    Serial.print(")\r\n");
-    
+    char buff[32];
+    snprintf(buff, sizeof(buff), "%ld msg(%d,%d)\r\n", millis(), a, f);
+    debug(buff);
+ 
     if (flash_req_handler(msg))
         return;
 
@@ -225,9 +232,9 @@ public:
     if (msg->extract(PRESENT_STATE, & r, sizeof(r)))
     {
       set_relay(r);
-      Serial.print("set_relay(");
-      Serial.print(r);
-      Serial.print(")\r\n");
+      char buff[24];
+      snprintf(buff, sizeof(buff), "set_relay(%d)\r\n", r);
+      debug(buff); 
     }
   }
 
@@ -246,7 +253,6 @@ static RadioRelay radio;
 void setup() 
 {
   Serial.begin(57600);
-  Serial.println(radio.banner());
 
   radio.init();
   radio.power_on();
@@ -265,7 +271,7 @@ void loop()
   if (count) {
     if (!--count) {
       count = flash_fast_poll() ? 50000 : 500000;
-      Serial.print("req tx\r\n");
+      radio.debug("req tx\r\n");
       radio.req_tx_message();
     }
   }
