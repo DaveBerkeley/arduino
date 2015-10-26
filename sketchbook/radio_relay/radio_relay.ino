@@ -188,7 +188,7 @@ public:
     init_leds();
     set_relay(0);
 
-    flash_init(& mem, true);
+    flash_init(& mem, ::debug);
   }
 
   virtual const char* banner()
