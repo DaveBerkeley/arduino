@@ -27,6 +27,7 @@ private:
 
   void sleep(uint16_t time);
   void make_message(Message* msg, int msg_id, bool ack);
+  void on_message_handler(Message* msg);
 
 public:
 

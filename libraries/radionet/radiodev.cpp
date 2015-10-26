@@ -73,7 +73,7 @@ void RadioDev::radio_loop(uint16_t time)
     Message m((void*) & rf12_data[0]);
 
     if (m.get_dest() == my_node) {
-      on_message(& m);
+      on_message_handler(& m);
       if (m.get_ack()) {
         // ack the info
         ack_id = m.get_mid();
@@ -154,13 +154,27 @@ void RadioDev::power_on()
   rf12_sleep(-1);
 }
 
+void RadioDev::on_message_handler(Message* msg)
+{
+  uint8_t size;
+  if (msg->extract(Message::TEXT, & size, sizeof(size))) {
+    char* text = (char*) msg->payload();
+    if (size < (Message::DATA_SIZE - 1)) {
+        text[size] = '\0';
+        debug(text);
+    }
+  } else {
+    on_message(msg);
+  }
+}
+
 void RadioDev::radio_poll()
 {
   if (rf12_recvDone() && (rf12_crc == 0)) {
     Message m((void*) & rf12_data[0]);
 
     if (m.get_dest() == my_node) {
-      on_message(& m);
+      on_message_handler(& m);
       if (m.get_ack()) {
         // ack the message : probably a poll from the gateway
         const uint8_t ack = m.get_mid();
