@@ -13,7 +13,8 @@ RadioDev::RadioDev(uint8_t gateway_id, uint16_t sleeps)
 : message(0, gateway_id),
   gateway_id(gateway_id),
   nsleep(sleeps),
-  sleep_count(0)
+  sleep_count(0),
+  debug_fn(0)
 {
 }
 
@@ -21,6 +22,17 @@ void RadioDev::init(void)
 {
   my_node = rf12_configSilent();
   state = START;
+}
+
+void RadioDev::set_debug(void (*fn)(const char*))
+{
+  debug_fn = fn;
+}
+
+void RadioDev::debug(const char* text)
+{
+  if (debug_fn)
+    debug_fn(text);
 }
 
 void RadioDev::sleep(uint16_t time)
@@ -174,7 +186,10 @@ void RadioDev::radio_poll()
   }
 
   if (state == START) {
-    Serial.print("hello\r\n");
+    if (debug_fn) {
+        debug_fn(banner());
+        debug_fn("\r\n");
+    }
     send_text(banner(), ack_id, false);
     rf12_sendWait(0);
     ack_id = 0;

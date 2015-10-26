@@ -20,6 +20,7 @@ private:
   uint8_t gateway_id;
   uint16_t nsleep;
   uint16_t sleep_count;
+  void (*debug_fn)(const char* to_print);
 
   static const int ACK_WAIT_MS = 100;
   static const int ACK_RETRIES = 5;
@@ -58,6 +59,9 @@ public:
 
   void power_on();
   void req_tx_message();
+
+  void set_debug(void (*fn)(const char* to_print));
+  void debug(const char* text);
 };
 
 //  FIN
