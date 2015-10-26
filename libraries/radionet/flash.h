@@ -19,7 +19,7 @@
 
 class MemoryPlug;
 
-bool flash_init(MemoryPlug* mem, bool verbose);
+bool flash_init(MemoryPlug* mem, void (*debug_fn)(const char* text));
 
 class Message;
 

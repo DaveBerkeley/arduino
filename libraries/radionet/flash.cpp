@@ -38,7 +38,13 @@ static MemoryPlug* mem;
 #define ALLOW_VERBOSE
 
 #if defined(ALLOW_VERBOSE)
-static bool verbose;
+static void (*debug_fn)(const char* text);
+
+static void debug(const char* text)
+{
+    if (debug_fn)
+        debug_fn(text);
+}
 #endif // ALLOW_VERBOSE
 
     /*
@@ -124,12 +130,12 @@ void show_block(const uint8_t* data, uint16_t len)
 {
     for (uint16_t i = 0; i < len; ++i) {
         if (i && !(i % 16))
-            Serial.print("\r\n");
+            debug("\r\n");
         char buff[8];
         snprintf(buff, sizeof(buff), "%02X ", data[i]);
-        Serial.print(buff);
+        debug(buff);
     }
-    Serial.print("\r\n");
+    debug("\r\n");
 }
 #else
 #define show_block(x, y)
@@ -137,10 +143,10 @@ void show_block(const uint8_t* data, uint16_t len)
 
 static FlashInfo flash_info = { FLASH_INFO, };
 
-bool flash_init(MemoryPlug* m, bool v)
+bool flash_init(MemoryPlug* m, void (*fn)(const char*))
 {
 #if defined(ALLOW_VERBOSE)
-    verbose = v;
+    debug_fn = fn;
 #endif
     mem = m;
 
@@ -151,9 +157,7 @@ bool flash_init(MemoryPlug* m, bool v)
         return false;
  
 #if defined(ALLOW_VERBOSE)
-    if (verbose) {
-        Serial.print("flash_init()\r\n");
-    }
+    debug("flash_init()\r\n");
 #endif
 
     // How to find this out from the memory device?
@@ -199,10 +203,10 @@ static void saver(void* obj, uint16_t block, uint16_t offset, uint16_t bytes, ui
     uint16_t* xfered = (uint16_t*) obj;
 
 #if defined(ALLOW_VERBOSE)
-    if (verbose) {
+    if (debug_fn) {
         char buff[24];
         snprintf(buff, sizeof(buff), "save(%d,%d,%d)\r\n", block, offset, bytes);
-        Serial.print(buff);
+        debug(buff);
     }
 #endif // ALLOW_VERBOSE
 
@@ -227,10 +231,10 @@ static void crcer(void* obj, uint16_t block, uint16_t offset, uint16_t bytes, ui
     uint8_t buff[bytes];
 
 #if defined(ALLOW_VERBOSE)
-    if (verbose) {
+    if (debug_fn) {
         char buff[24];
         snprintf(buff, sizeof(buff), "crcer(%d,%d,%d)\r\n", block, offset, bytes);
-        Serial.print(buff);
+        debug(buff);
     }
 #endif // ALLOW_VERBOSE
 
@@ -257,10 +261,10 @@ static void reader(void* obj, uint16_t block, uint16_t offset, uint16_t bytes, u
     uint16_t* xfered = (uint16_t*) obj;
 
 #if defined(ALLOW_VERBOSE)
-    if (verbose) {
+    if (debug_fn) {
         char buff[24];
         snprintf(buff, sizeof(buff), "read(%d,%d,%d)\r\n", block, offset, bytes);
-        Serial.print(buff);
+        debug(buff);
     }
 #endif // ALLOW_VERBOSE
 
@@ -307,9 +311,7 @@ bool flash_req_handler(Message* msg)
     switch (cmd) {
         case FLASH_INFO_REQ   : {
 #if defined(ALLOW_VERBOSE)
-            if (verbose) {
-                Serial.print("flash_info_req()\r\n");
-            }
+            debug("flash_info_req()\r\n");
 #endif // ALLOW_VERBOSE
             send_flash_message(& flash_info, sizeof(flash_info));
             break;
@@ -324,10 +326,10 @@ bool flash_req_handler(Message* msg)
             info.crc = get_crc(fc->addr, fc->bytes);
 
 #if defined(ALLOW_VERBOSE)
-            if (verbose) {
+            if (debug_fn) {
                 char buff[32];
                 snprintf(buff, sizeof(buff), "flash_crc(%ld,%d,%X)\r\n", info.addr, info.bytes, info.crc);
-                Serial.print(buff);
+                debug(buff);
             }
 #endif // ALLOW_VERBOSE
 
@@ -336,7 +338,7 @@ bool flash_req_handler(Message* msg)
         }
         case FLASH_REBOOT   : {
 #if defined(ALLOW_VERBOSE)
-            Serial.print("flash_reboot()\r\n");
+            debug("flash_reboot()\r\n");
 #endif // ALLOW_VERBOSE
             wdt_enable(WDTO_15MS);
             noInterrupts();
@@ -357,10 +359,10 @@ bool flash_req_handler(Message* msg)
             info.crc = get_crc(fc->addr, fc->bytes);            
 
 #if defined(ALLOW_VERBOSE)
-            if (verbose) {
+            if (debug_fn) {
                 char buff[24];
                 snprintf(buff, sizeof(buff), "flash_write(%ld,%d)\r\n", info.addr, info.bytes);
-                Serial.print(buff);
+                debug(buff);
             }
 #endif // ALLOW_VERBOSE
 
@@ -379,12 +381,13 @@ bool flash_req_handler(Message* msg)
             read(& info.bytes, fc->addr, fc->bytes, info.data, sizeof(info.data));
     
 #if defined(ALLOW_VERBOSE)
-            if (verbose) {
-                Serial.print("flash_read_req(");
-                Serial.print(info.addr);
-                Serial.print(",");
-                Serial.print(info.bytes);
-                Serial.print(")\r\n");
+            if (debug_fn) {
+                char buff[32];
+                snprintf(buff, sizeof(buff), 
+                        "flash_read_req(%ld,%d)\r\n",
+                        info.addr,
+                        info.bytes);
+                debug(buff);
             }
 #endif // ALLOW_VERBOSE
 
@@ -395,10 +398,10 @@ bool flash_req_handler(Message* msg)
             FlashFastPoll* fc = (FlashFastPoll*) payload;
             fast_poll = fc->poll;
 #if defined(ALLOW_VERBOSE)
-            if (verbose) {
-                Serial.print("set_fast_poll(");
-                Serial.print(fast_poll);
-                Serial.print(")\r\n");
+            if (debug_fn) {
+                char buff[32];
+                snprintf(buff, sizeof(buff), "set_fast_poll(%d)\r\n", fast_poll);
+                debug(buff);
             }
 #endif // ALLOW_VERBOSE
             break;
@@ -410,10 +413,10 @@ bool flash_req_handler(Message* msg)
         case FLASH_INFO :
         default :   {
 #if defined(ALLOW_VERBOSE)
-            if (verbose) {
-                Serial.print("unknown flash(");
-                Serial.print(cmd);
-                Serial.print(")\r\n");
+            if (debug_fn) {
+                char buff[32];
+                snprintf(buff, sizeof(buff), "flash(%d)\r\n", cmd);
+                debug(buff);
             }
 #endif // ALLOW_VERBOSE
             // Not implemented or unrecognised
