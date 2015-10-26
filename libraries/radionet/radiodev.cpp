@@ -161,6 +161,8 @@ void RadioDev::on_message_handler(Message* msg)
     char* text = (char*) msg->payload();
     if (size < (Message::DATA_SIZE - 1)) {
         text[size] = '\0';
+        text -= 1;
+        *text = '!';
         debug(text);
     }
   } else {
