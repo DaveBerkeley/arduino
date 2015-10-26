@@ -57,8 +57,10 @@ void show_message(Message* msg, const char* text, uint8_t my_node)
     Serial.print("\r\n");
 }
 
-void send_message(Message* msg)
+void send_message(Message* msg, uint8_t dev)
 {
+  if (dev)
+      msg->set_dest(dev);
   rf12_sendStart(msg->get_dest(), msg->data(), msg->size());
 }
 
@@ -71,7 +73,7 @@ static void make_message(Message* msg, int msg_id, bool ack)
     msg->set_ack();
 }
 
-void send_text(const char* text, int msg_id, bool ack)
+void send_text(const char* text, int msg_id, bool ack, uint8_t dev)
 {
     Message msg(0);
 
@@ -83,7 +85,7 @@ void send_text(const char* text, int msg_id, bool ack)
     msg.append(Message::TEXT, & len, sizeof(len));
     msg.append(Message::TEXT, text, len);
 
-    send_message(& msg);
+    send_message(& msg, dev);
 }
 
 // FIN

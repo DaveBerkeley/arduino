@@ -143,9 +143,9 @@ uint8_t make_mid();
 void show_message(Message* msg, const char* text, uint8_t my_node);
 
 // Send Message over RF12
-void send_message(Message* msg);
+void send_message(Message* msg, uint8_t dev=0);
 
 // Send text over RF12
-void send_text(const char* text, int msg_id, bool ack);
+void send_text(const char* text, int msg_id, bool ack, uint8_t dev=0);
 
 // FIN
