@@ -220,9 +220,9 @@ public:
   {
     set_led(OK, true);
     const uint8_t a = msg->get_admin();
-    const uint8_t f = msg->get_flags();
+    const uint16_t f = msg->get_flags();
     char buff[32];
-    snprintf(buff, sizeof(buff), "%ld msg(%d,%d)\r\n", millis(), a, f);
+    snprintf(buff, sizeof(buff), "%ld msg(%d,%X)\r\n", millis(), a, f);
     debug(buff);
  
     if (flash_req_handler(msg))
