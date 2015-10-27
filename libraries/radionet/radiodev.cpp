@@ -11,6 +11,7 @@
 
 RadioDev::RadioDev(uint8_t gateway_id, uint16_t sleeps)
 : message(0, gateway_id),
+  wait_until(0),
   gateway_id(gateway_id),
   nsleep(sleeps),
   sleep_count(0),

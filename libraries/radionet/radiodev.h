@@ -16,7 +16,7 @@ private:
   uint16_t ack_id;
   uint8_t retries;
   Message message;
-  uint32_t wait_until = 0;
+  uint32_t wait_until;
   uint8_t gateway_id;
   uint16_t nsleep;
   uint16_t sleep_count;
