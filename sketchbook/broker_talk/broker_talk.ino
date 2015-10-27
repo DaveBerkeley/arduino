@@ -23,7 +23,6 @@
 
 #include <radionet.h>
 #include <led.h>
-#include <flash.h>
 
 #include <OneWire.h>
 #include <DallasTemperature.h>
@@ -42,14 +41,6 @@ OneWire oneWire(ONE_WIRE_BUS);
 
 // Pass our oneWire reference to Dallas Temperature. 
 DallasTemperature sensors(&oneWire);
-
-    /*
-    *   Flash Memory
-    */
-
-// JeeLib Memory Plug handling
-static PortI2C i2cBus(1);
-static MemoryPlug mem(i2cBus);
 
  /*
   * LED control
@@ -336,11 +327,6 @@ static Packet* next_host_packet()
 #define PRESENT_TEMP            (1<<0)
 #define PRESENT_PACKET_COUNT    (1<<1)
 
-static void tx_debug(const char* text)
-{
-    send_text(text, make_mid(), false, 7);
-}
-
 static void add_packet_info(Message* msg)
 {
     const uint8_t c = spare_packets();
@@ -349,12 +335,16 @@ static void add_packet_info(Message* msg)
     msg->append(0, & d, sizeof(d));
 }
 
+static void ack_packet_send()
+{
+  // Inform host of packet send status
+  Message msg(make_mid(), GATEWAY_ID);
+  add_packet_info(& msg);
+  to_host(GATEWAY_ID, (uint8_t*) msg.data(), msg.size());
+}
+
 static uint8_t read_data(uint8_t* data, int length) {
   Message msg((void*) data);
-
-  if (flash_req_handler(& msg)) {
-      return 0;
-  }
 
   unknown_led.set(0);
 
@@ -383,7 +373,7 @@ static int decode_command(uint8_t* data, int length)
 
   if (!mid)
       return 0;
-  
+ 
   Message response(mid, GATEWAY_ID);
 
   // Send Temperature.
@@ -398,14 +388,6 @@ static int decode_command(uint8_t* data, int length)
   to_host(GATEWAY_ID, (uint8_t*) response.data(), response.size());
 
   return 1;
-}
-
-static void ack_packet_send()
-{
-  // Inform host of packet send status
-  Message msg(make_mid(), GATEWAY_ID);
-  add_packet_info(& msg);
-  to_host(GATEWAY_ID, (uint8_t*) msg.data(), msg.size());
 }
 
     /*
@@ -464,8 +446,6 @@ void setup () {
 
   MsTimer2::set(100, on_timer);
   MsTimer2::start();
-
-  flash_init(& mem, tx_debug, send_fn);
 }
 
 //MilliTimer ledTimer;
