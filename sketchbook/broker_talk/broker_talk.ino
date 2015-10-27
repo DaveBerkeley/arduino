@@ -349,37 +349,50 @@ static void add_packet_info(Message* msg)
     msg->append(0, & d, sizeof(d));
 }
 
-static int decode_command(uint8_t* data, int length)
-{
+static uint8_t read_data(uint8_t* data, int length) {
   Message msg((void*) data);
 
-  if (!flash_req_handler(& msg)) {
-    unknown_led.set(0);
+  if (flash_req_handler(& msg)) {
+      return 0;
+  }
 
-    // Check for unknown device bitmap
-    uint32_t mask;
-    if (msg.extract(CMD_UNKNOWN, & mask, sizeof(mask))) {
-      unknown_devs = mask;
-      if (mask) {
-        unknown_led.set(8000);
-      }
-    }
+  unknown_led.set(0);
 
-    if (msg.extract(CMD_SLEEPY, & mask, sizeof(mask))) {
-      sleepy_devs = mask;
+  // Check for unknown device bitmap
+  uint32_t mask;
+  if (msg.extract(CMD_UNKNOWN, & mask, sizeof(mask))) {
+    unknown_devs = mask;
+    if (mask) {
+      unknown_led.set(8000);
     }
+  }
+
+  if (msg.extract(CMD_SLEEPY, & mask, sizeof(mask))) {
+    sleepy_devs = mask;
   }
 
   if (!(msg.get_ack()))
     return 0;
-  
-  Message response(msg.get_mid(), GATEWAY_ID);
 
-  sensors.requestTemperatures(); // Send the command to get temperatures
+  return msg.get_mid();  
+}
+
+static int decode_command(uint8_t* data, int length)
+{
+  const uint8_t mid = read_data(data, length);
+
+  if (!mid)
+      return 0;
+  
+  Message response(mid, GATEWAY_ID);
+
+  // Send Temperature.
+  sensors.requestTemperatures();
   const float ft = sensors.getTempCByIndex(0);
   const uint16_t t = int(ft * 100);
   response.append(PRESENT_TEMP, & t, sizeof(t));
 
+  // Add info / status of packet buffer.
   add_packet_info(& response);
 
   to_host(GATEWAY_ID, (uint8_t*) response.data(), response.size());
