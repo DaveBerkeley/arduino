@@ -34,6 +34,7 @@
 #include "radionet.h"
 
 static MemoryPlug* mem;
+static void (*flash_send_fn)(const void* data, int length) = 0;
 
 #define ALLOW_VERBOSE
 
@@ -143,10 +144,13 @@ void show_block(const uint8_t* data, uint16_t len)
 
 static FlashInfo flash_info = { FLASH_INFO, };
 
-bool flash_init(MemoryPlug* m, void (*fn)(const char*))
+bool flash_init(MemoryPlug* m, 
+    void (*text_fn)(const char*), 
+    void (*send_fn)(const void* data, int length))
 {
+    flash_send_fn = send_fn;
 #if defined(ALLOW_VERBOSE)
-    debug_fn = fn;
+    debug_fn = text_fn;
 #endif
     mem = m;
 
@@ -279,15 +283,20 @@ static void read(uint16_t* xfered, uint32_t addr, uint16_t bytes, uint8_t* data,
 }
 
     /*
-     *  Send a FLASH message to the Gateway.
+     *  Send a FLASH message to the Gateway (if node)
+     *  or to host (if gateway).
      */
 
 void send_flash_message(const void* data, int length)
 {
-    Message msg(make_mid(), GATEWAY_ID);
+    if (flash_send_fn) {
+        flash_send_fn(data, length);
+    } else {
+        Message msg(make_mid(), GATEWAY_ID);
 
-    msg.append(Message::FLASH, data, length);
-    send_message(& msg);
+        msg.append(Message::FLASH, data, length);
+        send_message(& msg);
+    }
 }
 
     /*

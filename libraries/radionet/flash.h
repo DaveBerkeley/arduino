@@ -19,7 +19,9 @@
 
 class MemoryPlug;
 
-bool flash_init(MemoryPlug* mem, void (*debug_fn)(const char* text));
+bool flash_init(MemoryPlug* mem, 
+        void (*debug_fn)(const char* text), 
+        void (*send_fn)(const void* data, int length)=0);
 
 class Message;
 
