@@ -23,6 +23,7 @@
 
 #include <radionet.h>
 #include <led.h>
+#include <flash.h>
 
 #include <OneWire.h>
 #include <DallasTemperature.h>
@@ -41,6 +42,14 @@ OneWire oneWire(ONE_WIRE_BUS);
 
 // Pass our oneWire reference to Dallas Temperature. 
 DallasTemperature sensors(&oneWire);
+
+    /*
+    *   Flash Memory
+    */
+
+// JeeLib Memory Plug handling
+static PortI2C i2cBus(1);
+static MemoryPlug mem(i2cBus);
 
  /*
   * LED control
@@ -89,7 +98,7 @@ static int8_t leds[] = {
   *
   */
 
-#define MAX_DATA 128
+#define MAX_DATA 86 // TODO : what is the min this can be?
 
 class Packet
 {
@@ -206,7 +215,7 @@ public:
   }
 };
 
-static void to_host(int node, uint8_t* data, int bytes)
+static void to_host(int node, const uint8_t* data, int bytes)
 {
   // send the packet in Bencode to the host        
   Serial.print("li");
@@ -223,6 +232,11 @@ static void packet_to_host(void)
 {
   // send the packet in Bencode to the host    
   to_host((int) rf12_hdr, (uint8_t*) rf12_data, (int) rf12_len);
+}
+
+static void send_fn(const void* data, int bytes)
+{
+  to_host(GATEWAY_ID, (const uint8_t*) data, bytes);    
 }
 
     /*
@@ -322,6 +336,11 @@ static Packet* next_host_packet()
 #define PRESENT_TEMP            (1<<0)
 #define PRESENT_PACKET_COUNT    (1<<1)
 
+static void tx_debug(const char* text)
+{
+    send_text(text, make_mid(), false, 7);
+}
+
 static void add_packet_info(Message* msg)
 {
     const uint8_t c = spare_packets();
@@ -332,30 +351,29 @@ static void add_packet_info(Message* msg)
 
 static int decode_command(uint8_t* data, int length)
 {
-  Message command((void*) data);
+  Message msg((void*) data);
 
-  unknown_led.set(0);
+  if (!flash_req_handler(& msg)) {
+    unknown_led.set(0);
 
-  // Check for unknown device bitmap
-  uint32_t mask;
-  if (command.extract(CMD_UNKNOWN, & mask, sizeof(mask))) {
-    unknown_devs = mask;
-    if (mask) {
-      unknown_led.set(8000);
+    // Check for unknown device bitmap
+    uint32_t mask;
+    if (msg.extract(CMD_UNKNOWN, & mask, sizeof(mask))) {
+      unknown_devs = mask;
+      if (mask) {
+        unknown_led.set(8000);
+      }
+    }
+
+    if (msg.extract(CMD_SLEEPY, & mask, sizeof(mask))) {
+      sleepy_devs = mask;
     }
   }
 
-  if (command.extract(CMD_SLEEPY, & mask, sizeof(mask))) {
-    sleepy_devs = mask;
-    if (mask) {
-      //unknown_led.set(8000);
-    }
-  }
-
-  if (!(command.get_ack()))
+  if (!(msg.get_ack()))
     return 0;
   
-  Message response(command.get_mid(), GATEWAY_ID);
+  Message response(msg.get_mid(), GATEWAY_ID);
 
   sensors.requestTemperatures(); // Send the command to get temperatures
   const float ft = sensors.getTempCByIndex(0);
@@ -381,11 +399,11 @@ static void ack_packet_send()
      *  Send Debug message
     */
 
-void tx_debug(const char* h)
-{
-    // NOTE : CRASHES HOST PARSER!
-    to_host(-1, (uint8_t*) h, (int) strlen(h));
-}
+//void tx_debug(const char* h)
+//{
+//    // NOTE : CRASHES HOST PARSER!
+//    to_host(-1, (uint8_t*) h, (int) strlen(h));
+//}
 
     /*
     *   Timer Interrupt
@@ -433,6 +451,8 @@ void setup () {
 
   MsTimer2::set(100, on_timer);
   MsTimer2::start();
+
+  flash_init(& mem, tx_debug, send_fn);
 }
 
 //MilliTimer ledTimer;
