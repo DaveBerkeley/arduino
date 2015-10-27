@@ -289,12 +289,13 @@ static void read(uint16_t* xfered, uint32_t addr, uint16_t bytes, uint8_t* data,
 
 void send_flash_message(const void* data, int length)
 {
-    if (flash_send_fn) {
-        flash_send_fn(data, length);
-    } else {
-        Message msg(make_mid(), GATEWAY_ID);
+    Message msg(make_mid(), GATEWAY_ID);
 
-        msg.append(Message::FLASH, data, length);
+    msg.append(Message::FLASH, data, length);
+
+    if (flash_send_fn) {
+        flash_send_fn(msg.data(), msg.size());
+    } else {
         send_message(& msg);
     }
 }
