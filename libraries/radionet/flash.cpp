@@ -55,6 +55,8 @@ static void debug(const char* text)
 enum FLASH_CMD {
     FLASH_INFO_REQ = 1,
     FLASH_INFO = 2,
+    FLASH_RECORD_REQ = 3,
+    FLASH_RECORD = 4,
     FLASH_WRITE = 5,
     FLASH_WRITTEN = 6,
     FLASH_CRC_REQ = 7,
@@ -110,6 +112,28 @@ typedef struct {
     uint16_t    bytes;
     uint8_t     data[MAX_DATA - sizeof(FlashReadReq)];
 }   FlashRead;
+
+typedef struct {
+    uint8_t     cmd;
+    uint8_t     slot;
+}   FlashRecordReq;
+
+typedef struct {
+    uint8_t     name[8];
+    uint32_t    addr;
+    uint16_t    bytes;
+    uint16_t    crc;
+}   _FlashRecord;
+
+typedef struct {
+    uint8_t     cmd;
+    uint8_t     slot;
+    _FlashRecord record;
+}   FlashRecord;
+
+#define MAX_SLOTS 8
+typedef FlashRecord FlashRecords[MAX_SLOTS];
+
 
 static bool fast_poll = false;
 
@@ -273,7 +297,7 @@ static void reader(void* obj, uint16_t block, uint16_t offset, uint16_t bytes, u
 #endif // ALLOW_VERBOSE
 
     mem->load(block, offset, data, bytes);
-    show_block(data, bytes);
+    //show_block(data, bytes);
     *xfered += bytes;
 }
 
@@ -416,6 +440,58 @@ bool flash_req_handler(Message* msg)
 #endif // ALLOW_VERBOSE
             break;
         }
+        case FLASH_RECORD_REQ : {
+            FlashRecordReq* fc = (FlashRecordReq*) payload;
+
+#if defined(ALLOW_VERBOSE)
+            if (debug_fn) {
+                char buff[32];
+                snprintf(buff, sizeof(buff), "flash_record_req(%d)\r\n", fc->slot);
+                debug(buff);
+            }
+#endif // ALLOW_VERBOSE
+
+            FlashRecord info;
+
+            info.cmd = FLASH_RECORD;
+            info.slot = fc->slot;
+
+            const uint16_t size = sizeof(info.record);
+            const uint32_t offset = fc->slot * size;
+            uint16_t xferred = 0;
+            // Read Record
+            read(& xferred, offset, size, (uint8_t*) & info.record, size);
+            send_flash_message(& info, sizeof(info));
+            break;
+        }
+        case FLASH_RECORD : {
+            FlashRecord* fc = (FlashRecord*) payload;
+#if defined(ALLOW_VERBOSE)
+            if (debug_fn) {
+                char buff[32];
+                snprintf(buff, sizeof(buff), "flash_record(%d)\r\n", fc->slot);
+                debug(buff);
+            }
+#endif // ALLOW_VERBOSE
+            // Write Record
+            const uint16_t size = sizeof(fc->record);
+            const uint32_t offset = fc->slot * size;
+            FlashWritten info;
+
+            info.cmd = FLASH_WRITTEN;
+            info.addr = offset;
+            info.bytes = 0;
+
+            // Do the write
+            if (fc->slot <= MAX_SLOTS) {
+                save(& info.bytes, offset, size, (uint8_t*) & fc->record);
+                // CRC the EEPROM that we've just written
+                info.crc = get_crc(offset, size);            
+            }
+            send_flash_message(& info, sizeof(info));
+            break;
+        }
+
         // Don't implement these on node :
         case FLASH_CRC :
         case FLASH_READ :
