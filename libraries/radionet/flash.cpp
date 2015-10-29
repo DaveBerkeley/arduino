@@ -132,8 +132,6 @@ typedef struct {
 }   FlashRecord;
 
 #define MAX_SLOTS 8
-typedef FlashRecord FlashRecords[MAX_SLOTS];
-
 
 static bool fast_poll = false;
 
@@ -181,17 +179,15 @@ bool flash_init(MemoryPlug* m,
     if (!mem)
         return false;
 
-    if (!mem->isPresent())
-        return false;
- 
+    if (mem->isPresent()) {
 #if defined(ALLOW_VERBOSE)
-    debug("flash_init()\r\n");
+        debug("flash_init()\r\n");
 #endif
-
-    // How to find this out from the memory device?
-    flash_info.blocks = (128 * 1024L) / 256;
-    flash_info.block_size = 256;
-    flash_info.packet_size = sizeof(FlashRead::data);
+        // How to find this out from the memory device?
+        flash_info.blocks = (128 * 1024L) / 256;
+        flash_info.block_size = 256;
+        flash_info.packet_size = sizeof(FlashRead::data);
+    }
 
     return true;
 }
@@ -330,10 +326,6 @@ void send_flash_message(const void* data, int length)
 
 bool flash_req_handler(Message* msg)
 {
-    //  Is there any Flash attached?    
-    if (!flash_info.blocks)
-        return false;
-
     uint8_t* payload = (uint8_t*) msg->payload();
 
     //  If msg is not a flash request, handle it elsewhere
