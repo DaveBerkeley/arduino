@@ -150,6 +150,22 @@ bool flash_fast_poll()
 
 static FlashInfo flash_info = { FLASH_INFO, };
 
+static void i2c_load(uint16_t page, uint8_t offset, void* buff, int count)
+{
+    mem->load(page, offset, buff, count);
+}
+
+static void i2c_save(uint16_t page, uint8_t offset, const void* buff, int count)
+{
+    mem->save(page, offset, buff, count);
+}
+
+static FlashIO flash_io = {
+    & flash_info.info,
+    i2c_load,
+    i2c_save,
+};
+
 bool flash_init(MemoryPlug* m, 
     void (*text_fn)(const char*), 
     void (*send_fn)(const void* data, int length))
@@ -177,30 +193,13 @@ bool flash_init(MemoryPlug* m,
 }
 
     /*
-     *  Save data to Flash
-     */
-
-static void saver(void* obj, uint16_t block, uint16_t offset, uint16_t bytes, uint8_t* data)
-{
-    uint16_t* xfered = (uint16_t*) obj;
-
-    mem->save(block, offset, data, bytes);
-    *xfered += bytes;
-}
-
-static void save(const _FlashInfo* info, uint16_t* xfered, uint32_t addr, uint16_t bytes, uint8_t* data)
-{
-    block_iter(info, xfered, addr, bytes, data, saver);
-}
-
-    /*
      *  CRC a block of Flash
      */
 
 //#define crc_calc _crc_xmodem_update
 #define crc_calc _crc16_update
 
-static void crcer(void* obj, uint16_t block, uint16_t offset, uint16_t bytes, uint8_t*) {
+static void crcer(const FlashIO* io, void* obj, uint16_t block, uint16_t offset, uint16_t bytes, uint8_t*) {
     uint8_t buff[bytes];
 
     mem->load(block, offset, buff, bytes);
@@ -211,27 +210,10 @@ static void crcer(void* obj, uint16_t block, uint16_t offset, uint16_t bytes, ui
     }
 }
 
-static uint16_t get_crc(const _FlashInfo* info, uint32_t addr, uint16_t bytes) {
+static uint16_t get_crc(const FlashIO* io, uint32_t addr, uint16_t bytes) {
     uint16_t crc = 0;
-    block_iter(info, & crc, addr, bytes, 0, crcer);
+    block_iter(io, & crc, addr, bytes, 0, crcer);
     return crc;
-}
-
-    /*
-     *  Read data from Flash
-     */
-
-static void reader(void* obj, uint16_t block, uint16_t offset, uint16_t bytes, uint8_t* data)
-{
-    uint16_t* xfered = (uint16_t*) obj;
-
-    mem->load(block, offset, data, bytes);
-    *xfered += bytes;
-}
-
-static void read(const _FlashInfo* info, uint16_t* xfered, uint32_t addr, uint16_t bytes, uint8_t* data, uint16_t max_size)
-{
-    block_iter(info, xfered, addr, min(bytes, max_size), data, reader);
 }
 
     /*
@@ -281,7 +263,7 @@ bool flash_req_handler(Message* msg)
             info.cmd = FLASH_CRC;
             info.addr = fc->addr;
             info.bytes = fc->bytes;
-            info.crc = get_crc(& flash_info.info, fc->addr, fc->bytes);
+            info.crc = get_crc(& flash_io, fc->addr, fc->bytes);
 
 #if defined(ALLOW_VERBOSE)
             if (debug_fn) {
@@ -312,9 +294,9 @@ bool flash_req_handler(Message* msg)
             info.bytes = 0;
 
             // Do the write
-            save(& flash_info.info, & info.bytes, fc->addr, fc->bytes, fc->data);
+            save(& flash_io, & info.bytes, fc->addr, fc->bytes, fc->data);
             // CRC the EEPROM that we've just written
-            info.crc = get_crc(& flash_info.info, fc->addr, fc->bytes);            
+            info.crc = get_crc(& flash_io, fc->addr, fc->bytes);            
 
 #if defined(ALLOW_VERBOSE)
             if (debug_fn) {
@@ -336,7 +318,7 @@ bool flash_req_handler(Message* msg)
             info.addr = fc->addr;
             info.bytes = 0;
 
-            read(& flash_info.info, & info.bytes, fc->addr, fc->bytes, info.data, sizeof(info.data));
+            read(& flash_io, & info.bytes, fc->addr, fc->bytes, info.data, sizeof(info.data));
     
 #if defined(ALLOW_VERBOSE)
             if (debug_fn) {
@@ -384,7 +366,7 @@ bool flash_req_handler(Message* msg)
             const uint32_t offset = fc->slot * size;
             uint16_t xferred = 0;
             // Read Record
-            read(& flash_info.info, & xferred, offset, size, (uint8_t*) & info.record, size);
+            read(& flash_io, & xferred, offset, size, (uint8_t*) & info.record, size);
             send_flash_message(& info, sizeof(info));
             break;
         }
@@ -408,9 +390,9 @@ bool flash_req_handler(Message* msg)
 
             // Do the write
             if (fc->slot <= MAX_SLOTS) {
-                save(& flash_info.info, & info.bytes, offset, size, (uint8_t*) & fc->record);
+                save(& flash_io, & info.bytes, offset, size, (uint8_t*) & fc->record);
                 // CRC the EEPROM that we've just written
-                info.crc = get_crc(& flash_info.info, offset, size);            
+                info.crc = get_crc(& flash_io, offset, size);            
             }
             send_flash_message(& info, sizeof(info));
             break;

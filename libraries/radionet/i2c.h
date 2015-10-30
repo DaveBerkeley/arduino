@@ -22,10 +22,19 @@ typedef struct {
     uint16_t    block_size;
 }   _FlashInfo;
 
+typedef struct {
+    _FlashInfo* info;
+    void (*load)(uint16_t page, uint8_t offset, void* buff, int count);
+    void (*save)(uint16_t page, uint8_t offset, const void* buff, int count);
+}   FlashIO;
+
 // Block Iterator to handle Flash page boundaries.
 
-typedef void (*b_iter)(void* obj, uint16_t block, uint16_t offset, uint16_t bytes, uint8_t* data);
+typedef void (*b_iter)(const FlashIO* io, void* obj, uint16_t block, uint16_t offset, uint16_t bytes, uint8_t* data);
 
-void block_iter(const _FlashInfo* info, void* obj, uint32_t addr, uint16_t bytes, uint8_t* data, b_iter fn);
+void block_iter(const FlashIO* io, void* obj, uint32_t addr, uint16_t bytes, uint8_t* data, b_iter fn);
+
+void save(const FlashIO* io, uint16_t* xfered, uint32_t addr, uint16_t bytes, uint8_t* data);
+void read(const FlashIO* io, uint16_t* xfered, uint32_t addr, uint16_t bytes, uint8_t* data, uint16_t max_size);
 
 // FIN

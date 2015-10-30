@@ -27,24 +27,58 @@
      *  Block Iterator to handle Flash page boundaries.
      */
 
-void block_iter(const _FlashInfo* info, void* obj, uint32_t addr, uint16_t bytes, uint8_t* data, b_iter fn)
+void block_iter(const FlashIO* io, void* obj, uint32_t addr, uint16_t bytes, uint8_t* data, b_iter fn)
 {
     //  calculate block / offset etc.
     while (bytes) {
-        const uint16_t bsize = info->block_size;
+        const uint16_t bsize = io->info->block_size;
         const uint16_t block = addr / bsize;
         const uint16_t offset = addr % bsize;
         const uint16_t size = min(bytes, bsize - offset);
 
-        if (block >= info->blocks)
+        if (block >= io->info->blocks)
             return;
 
-        fn(obj, block, offset, size, data);
+        fn(io, obj, block, offset, size, data);
 
         data += size;
         bytes -= size;
         addr += size;
     }
 } 
+
+    /*
+     *  Save data to Flash
+     */
+
+static void saver(const FlashIO* io, void* obj, uint16_t block, uint16_t offset, uint16_t bytes, uint8_t* data)
+{
+    uint16_t* xfered = (uint16_t*) obj;
+
+    io->save(block, offset, data, bytes);
+    *xfered += bytes;
+}
+
+void save(const FlashIO* io, uint16_t* xfered, uint32_t addr, uint16_t bytes, uint8_t* data)
+{
+    block_iter(io, xfered, addr, bytes, data, saver);
+}
+
+    /*
+     *  Read data from Flash
+     */
+
+static void reader(const FlashIO* io, void* obj, uint16_t block, uint16_t offset, uint16_t bytes, uint8_t* data)
+{
+    uint16_t* xfered = (uint16_t*) obj;
+
+    io->load(block, offset, data, bytes);
+    *xfered += bytes;
+}
+
+void read(const FlashIO* io, uint16_t* xfered, uint32_t addr, uint16_t bytes, uint8_t* data, uint16_t max_size)
+{
+    block_iter(io, xfered, addr, min(bytes, max_size), data, reader);
+}
 
 // FIN
