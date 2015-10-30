@@ -30,11 +30,11 @@ typedef struct {
 
 // Block Iterator to handle Flash page boundaries.
 
-typedef void (*b_iter)(const FlashIO* io, void* obj, uint16_t block, uint16_t offset, uint16_t bytes, uint8_t* data);
+typedef void (*flash_iter)(const FlashIO* io, void* obj, uint16_t block, uint16_t offset, uint16_t bytes, uint8_t* data);
 
-void block_iter(const FlashIO* io, void* obj, uint32_t addr, uint16_t bytes, uint8_t* data, b_iter fn);
+void flash_block(const FlashIO* io, void* obj, uint32_t addr, uint16_t bytes, uint8_t* data, flash_iter fn);
 
-void save(const FlashIO* io, uint16_t* xfered, uint32_t addr, uint16_t bytes, uint8_t* data);
-void read(const FlashIO* io, uint16_t* xfered, uint32_t addr, uint16_t bytes, uint8_t* data, uint16_t max_size);
+void flash_save(const FlashIO* io, uint16_t* xfered, uint32_t addr, uint16_t bytes, uint8_t* data);
+void flash_read(const FlashIO* io, uint16_t* xfered, uint32_t addr, uint16_t bytes, uint8_t* data);
 
 // FIN
