@@ -197,6 +197,9 @@ bool flash_init(MemoryPlug* m,
         flash_info.packet_size = sizeof(FlashRead::data);
     }
 
+    // TODO : remove me
+    pin_test();
+
     return true;
 }
 

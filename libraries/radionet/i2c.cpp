@@ -24,6 +24,52 @@
 #define min(a, b) (((a) < (b)) ? (a) : (b))
 
     /*
+     *  Pin IO functions.
+     */
+
+#include <avr/io.h>
+
+static inline void pin_change(volatile uint8_t* reg, uint8_t mask, bool state)
+{
+    if (state)
+        *reg |= mask;
+    else
+        *reg &= ~mask;
+}
+
+void pin_mode(const Pin* pin, bool output)
+{
+    pin_change(pin->ddr, pin->mask, output);
+}
+
+void pin_set(const Pin* pin, bool state)
+{
+    pin_change(pin->data, pin->mask, state);
+}
+
+bool pin_get(const Pin* pin)
+{
+    return (pin->mask & *(pin->pin)) ? true : false;
+}
+
+extern "C" {
+extern unsigned long millis(void);
+}
+
+void pin_test()
+{
+    Pin d6 = { & DDRD, & PORTD, & PIND, 1<<6 };
+
+    pin_mode(& d6, true);
+    bool state = true;
+    while (millis() < 5000) {
+        unsigned long m = millis();
+        m /= 500;
+        pin_set(& d6, m & 0x01);
+    }
+}
+
+    /*
      *  Block Iterator to handle Flash page boundaries.
      */
 
