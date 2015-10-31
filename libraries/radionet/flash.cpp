@@ -49,6 +49,12 @@ static void debug(const char* text)
 }
 #endif // ALLOW_VERBOSE
 
+void delay_us(uint16_t us)
+{
+    // TODO : make usable in bootloader
+    delayMicroseconds(us);
+}
+
     /*
      *  Command Interface
      */
@@ -173,6 +179,26 @@ static FlashIO flash_io = {
     /*
      *
      */
+
+    /*
+     *
+     */
+
+void pin_test()
+{
+    Pin d4 = { & DDRD, & PORTD, & PIND, 1<<4 };
+    Pin a0 = { & DDRC, & PORTC, & PINC, 1<<0 };
+
+    I2C i2c = {
+        & d4, & a0,
+        0x50 << 1,
+        10, // us delay
+    };
+
+    i2c_init(& i2c);
+    Serial.print(i2c_is_present(& i2c));
+    Serial.print("\r\n");
+}
 
 bool flash_init(MemoryPlug* m, 
     void (*text_fn)(const char*), 

@@ -17,6 +17,8 @@
  USA
 */
 
+void delay_us(uint16_t us);
+
     /*
      *  I2C Implementation
      */
@@ -33,11 +35,11 @@ void pin_mode(const Pin* pin, bool output);
 void pin_set(const Pin* pin, bool state);
 bool pin_get(const Pin* pin);
 
-void pin_test();
-
 typedef struct {
-    Pin     sda;
-    Pin     scl;
+    Pin*    sda;
+    Pin*    scl;
+    uint8_t addr;
+    uint16_t us;
 }   I2C;
 
 // Low level I2C io functions
@@ -47,9 +49,10 @@ void i2c_scl_hi(I2C* i2c);
 void i2c_scl_lo(I2C* i2c);
 
 // High level I2C functions
+void i2c_init(I2C* i2c);
 bool i2c_start(I2C* i2c, uint8_t addr);
 void i2c_stop(I2C* i2c);
-void i2c_write(I2C* i2c, uint8_t data);
+bool i2c_write(I2C* i2c, uint8_t data);
 uint8_t i2c_read(I2C* i2c, bool last);
 bool i2c_is_present(I2C* i2c);
 

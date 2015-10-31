@@ -24,10 +24,16 @@
 #define min(a, b) (((a) < (b)) ? (a) : (b))
 
     /*
-     *  Pin IO functions.
+     *  I2C library.
+     *
+     *  Intended to be used in bootloader, so needs to be in C, not C++,
+     *  and independent of the excellent jeelib library,
+     *  from which it borrows.
      */
 
-#include <avr/io.h>
+    /*
+     *  Pin IO functions.
+     */
 
 static inline void pin_change(volatile uint8_t* reg, uint8_t mask, bool state)
 {
@@ -56,17 +62,131 @@ extern "C" {
 extern unsigned long millis(void);
 }
 
-void pin_test()
-{
-    Pin d6 = { & DDRD, & PORTD, & PIND, 1<<6 };
+    /*
+     *  I2C pin manipulation primitives
+     */
 
-    pin_mode(& d6, true);
-    bool state = true;
-    while (millis() < 5000) {
-        unsigned long m = millis();
-        m /= 500;
-        pin_set(& d6, m & 0x01);
+void i2c_sda(I2C* i2c, bool data)
+{
+    // pull low, float hi
+    pin_mode(i2c->sda, !data);
+    // do I need to do this for hi?
+    pin_set(i2c->sda, data);
+}
+
+bool i2c_get(I2C* i2c)
+{
+    return pin_get(i2c->sda);
+}
+
+void i2c_scl(I2C* i2c, bool state)
+{
+    delay_us(i2c->us);
+    pin_set(i2c->scl, state);
+}
+
+    /*
+     *  I2C Communication.
+     */
+
+void i2c_init(I2C* i2c)
+{
+//    sdaOut(1);
+//    mode2(OUTPUT);
+//    sclHi();
+    i2c_sda(i2c, true);
+    pin_mode(i2c->scl, true);
+    i2c_scl(i2c, true);
+}
+
+bool i2c_start(I2C* i2c, uint8_t addr)
+{
+//    sclLo();
+//    sclHi();
+//    sdaOut(0);
+//    return write(addr);
+    i2c_scl(i2c, false);
+    i2c_scl(i2c, true);
+    i2c_sda(i2c, false);
+    return i2c_write(i2c, addr);
+}
+
+void i2c_stop(I2C* i2c)
+{
+//    sdaOut(0);
+//    sclHi();
+//    sdaOut(1);
+    i2c_sda(i2c, false);
+    i2c_scl(i2c, true);
+    i2c_sda(i2c, true);
+}
+
+bool i2c_write(I2C* i2c, uint8_t data)
+{
+//    sclLo();
+//    for (uint8_t mask = 0x80; mask != 0; mask >>= 1) {
+//        sdaOut(data & mask);
+//        sclHi();
+//        sclLo();
+//    }
+//    sdaOut(1);
+//    sclHi();
+//    uint8_t ack = ! sdaIn();
+//    sclLo();
+//    return ack
+    i2c_scl(i2c, false);
+    for (uint8_t mask = 0x80; mask; mask >>= 1) {
+        i2c_sda(i2c, data & mask);
+        i2c_scl(i2c, true);
+        i2c_scl(i2c, false);
     }
+    i2c_sda(i2c, true);
+    i2c_scl(i2c, true);
+    const uint8_t ack = ! i2c_get(i2c);
+    i2c_scl(i2c, false);
+    return ack;
+}
+
+uint8_t i2c_read(I2C* i2c, bool last)
+{
+//    uint8_t data = 0;
+//    for (uint8_t mask = 0x80; mask != 0; mask >>= 1) {
+//        sclHi();
+//        if (sdaIn())
+//            data |= mask;
+//        sclLo();
+//    }
+//    sdaOut(last);
+//    sclHi();
+//    sclLo();
+//    if (last)
+//        stop();
+//    sdaOut(1);
+//    return data;
+    uint8_t data = 0;
+    for (uint8_t mask = 0x80; mask; mask >>= 1) {
+        i2c_scl(i2c, true);
+        if (i2c_get(i2c))
+            data |= mask;
+        i2c_scl(i2c, false);
+    }
+    i2c_sda(i2c, last);
+    i2c_scl(i2c, true);
+    i2c_scl(i2c, false);
+    if (last)
+        i2c_stop(i2c);
+    i2c_sda(i2c, true);
+    return data;
+}
+
+bool i2c_is_present(I2C* i2c)
+{
+//    byte ok = send();
+//    stop();
+//    return ok;
+    const bool ok = i2c_start(i2c, i2c->addr);
+    i2c_stop(i2c);
+    return ok;
 }
 
     /*
