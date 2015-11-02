@@ -61,9 +61,9 @@ DallasTemperature sensors(&oneWire);
   *  LED handling
   */
   
-#define OK_LED 6
-#define TEST_LED 7
-#define RELAY 4
+#define OK_LED 7
+#define TEST_LED 8
+#define RELAY 6
 #define RELAY_LED 9
 
 class Pin
@@ -169,7 +169,7 @@ public:
   void set_relay(bool state)
   {
     m_on = state;
-    digitalWrite(RELAY, state ? LOW : HIGH);
+    digitalWrite(RELAY, state ? HIGH : LOW);
     digitalWrite(RELAY_LED, state ? LOW : HIGH);
   }
 
