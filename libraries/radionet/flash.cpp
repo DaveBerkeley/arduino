@@ -76,6 +76,12 @@ enum FLASH_CMD {
 
 typedef struct {
     uint8_t     cmd;
+    uint8_t     req_id;
+}   FlashInfoReq;
+
+typedef struct {
+    uint8_t     cmd;
+    uint8_t     req_id;
     _FlashInfo  info;
     uint16_t    packet_size;
 }   FlashInfo;
@@ -88,16 +94,25 @@ typedef struct {
 }   FlashFastPoll;
 
 typedef struct {
+    // TODO : remove me
     uint8_t     cmd;
     uint32_t    addr;
     uint16_t    bytes;
 }   FlashAddress;
 
-typedef FlashAddress FlashCrcReq;
+typedef struct {
+    uint8_t     cmd;
+    uint8_t     req_id;
+    uint32_t    addr;
+    uint16_t    bytes;
+}   FlashAddressX;
+
+typedef FlashAddressX FlashCrcReq;
 typedef FlashAddress FlashReadReq;
 
 typedef struct {
     uint8_t     cmd;
+    uint8_t     req_id;
     uint32_t    addr;
     uint16_t    bytes;
     uint16_t    crc;
@@ -287,9 +302,15 @@ bool flash_req_handler(Message* msg)
 
     switch (cmd) {
         case FLASH_INFO_REQ   : {
+            FlashInfoReq* fc = (FlashInfoReq*) payload;
 #if defined(ALLOW_VERBOSE)
-            debug("flash_info_req()\r\n");
+            if (debug_fn) {
+                char buff[32];
+                snprintf(buff, sizeof(buff), "flash_info_req(%d)\r\n", fc->req_id);
+                debug(buff);
+            }
 #endif // ALLOW_VERBOSE
+            flash_info.req_id = fc->req_id;
             send_flash_message(& flash_info, sizeof(flash_info));
             break;
         }
@@ -298,6 +319,7 @@ bool flash_req_handler(Message* msg)
             FlashCrc info;
 
             info.cmd = FLASH_CRC;
+            info.req_id = fc->req_id;
             info.addr = fc->addr;
             info.bytes = fc->bytes;
             info.crc = get_crc(& flash_io, fc->addr, fc->bytes);
@@ -305,7 +327,10 @@ bool flash_req_handler(Message* msg)
 #if defined(ALLOW_VERBOSE)
             if (debug_fn) {
                 char buff[32];
-                snprintf(buff, sizeof(buff), "flash_crc(%ld,%d,%X)\r\n", info.addr, info.bytes, info.crc);
+                snprintf(buff, sizeof(buff), 
+                        "flash_crc(%d,%ld,%d,%X)\r\n", 
+                        fc->req_id,
+                        info.addr, info.bytes, info.crc);
                 debug(buff);
             }
 #endif // ALLOW_VERBOSE
