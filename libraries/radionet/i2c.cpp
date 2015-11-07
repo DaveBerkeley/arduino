@@ -190,6 +190,45 @@ bool i2c_is_present(I2C* i2c)
 }
 
     /*
+     *
+     */
+
+void i2c_load(I2C* i2c, uint16_t page, uint8_t offset, void* buff, int count)
+{
+//    // also don't load right after a save, see http://forum.jeelabs.net/node/469
+//    while (millis() < nextSave)
+//        //;
+//
+//    setAddress(0x50 + (page >> 8));
+//    send();
+//    write((byte) page);
+//    write(offset);
+//    receive();
+//    byte* p = (byte*) buf;
+//    while (--count >= 0)
+//        *p++ = read(count == 0);
+//    stop();
+
+    // also don't load right after a save, see http://forum.jeelabs.net/node/469
+    while (get_ms() < i2c->next_save)
+        ;
+
+    const uint8_t addr = 0x50 + (page >> 8);
+    i2c_start(i2c, addr);
+    i2c_write(i2c, (uint8_t) page);
+    i2c_write(i2c, offset);
+    i2c_start(i2c, addr | 1);
+    uint8_t* p = (uint8_t*) buff;
+    while (--count >= 0)
+        *p++ = i2c_read(i2c, count == 0);
+    i2c_stop(i2c);
+}
+
+void i2c_save(I2C* i2c, uint16_t page, uint8_t offset, const void* buff, int count)
+{
+}
+
+    /*
      *  Block Iterator to handle Flash page boundaries.
      */
 

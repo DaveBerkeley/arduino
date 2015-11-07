@@ -55,6 +55,12 @@ void delay_us(uint16_t us)
     delayMicroseconds(us);
 }
 
+uint32_t get_ms()
+{
+    // TODO : make usable in bootloader
+    return millis();
+}
+
     /*
      *  Command Interface
      */
@@ -180,10 +186,6 @@ static FlashIO flash_io = {
      *
      */
 
-    /*
-     *
-     */
-
 void pin_test()
 {
     Pin d4 = { & DDRD, & PORTD, & PIND, 1<<4 };
@@ -195,9 +197,23 @@ void pin_test()
         10, // us delay
     };
 
+    while (0) {
     i2c_init(& i2c);
     Serial.print(i2c_is_present(& i2c));
     Serial.print("\r\n");
+    delay_us(10000000);
+    }
+
+#if 0
+    char buff[16];
+    i2c_load(& i2c, 0, 0, buff, sizeof(buff));
+ 
+    for (uint16_t i = 0; i < sizeof(buff); ++i) {
+        Serial.print(int(buff[i]));
+        Serial.print(" ");
+    }
+    Serial.print("\r\n");
+#endif
 }
 
 bool flash_init(MemoryPlug* m, 
