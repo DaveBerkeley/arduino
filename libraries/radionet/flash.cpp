@@ -82,6 +82,12 @@ enum FLASH_CMD {
 
 typedef struct {
     uint8_t     cmd;
+    uint8_t     req_id;
+}   FlashInfoReq;
+
+typedef struct {
+    uint8_t     cmd;
+    uint8_t     req_id;
     _FlashInfo  info;
     uint16_t    packet_size;
 }   FlashInfo;
@@ -90,11 +96,13 @@ typedef struct {
 
 typedef struct {
     uint8_t     cmd;
+    uint8_t     req_id;
     uint8_t     poll;
 }   FlashFastPoll;
 
 typedef struct {
     uint8_t     cmd;
+    uint8_t     req_id;
     uint32_t    addr;
     uint16_t    bytes;
 }   FlashAddress;
@@ -104,6 +112,7 @@ typedef FlashAddress FlashReadReq;
 
 typedef struct {
     uint8_t     cmd;
+    uint8_t     req_id;
     uint32_t    addr;
     uint16_t    bytes;
     uint16_t    crc;
@@ -113,6 +122,7 @@ typedef FlashCrc FlashWritten;
 
 typedef struct {
     uint8_t     cmd;
+    uint8_t     req_id;
     uint32_t    addr;
     uint16_t    bytes;
     uint8_t     data[0];
@@ -120,6 +130,7 @@ typedef struct {
 
 typedef struct {
     uint8_t     cmd;
+    uint8_t     req_id;
     uint32_t    addr;
     uint16_t    bytes;
     uint8_t     data[MAX_DATA - sizeof(FlashReadReq)];
@@ -127,6 +138,7 @@ typedef struct {
 
 typedef struct {
     uint8_t     cmd;
+    uint8_t     req_id;
     uint8_t     slot;
 }   FlashRecordReq;
 
@@ -139,6 +151,7 @@ typedef struct {
 
 typedef struct {
     uint8_t     cmd;
+    uint8_t     req_id;
     uint8_t     slot;
     _FlashRecord record;
 }   FlashRecord;
@@ -303,9 +316,17 @@ bool flash_req_handler(Message* msg)
 
     switch (cmd) {
         case FLASH_INFO_REQ   : {
+            FlashInfoReq* fc = (FlashInfoReq*) payload;
 #if defined(ALLOW_VERBOSE)
-            debug("flash_info_req()\r\n");
+            if (debug_fn) {
+                char buff[32];
+                snprintf(buff, sizeof(buff), 
+                        "flash_info_req(r=%d)\r\n", 
+                        (int) fc->req_id);
+                debug(buff);
+            }
 #endif // ALLOW_VERBOSE
+            flash_info.req_id = fc->req_id;
             send_flash_message(& flash_info, sizeof(flash_info));
             break;
         }
@@ -314,6 +335,7 @@ bool flash_req_handler(Message* msg)
             FlashCrc info;
 
             info.cmd = FLASH_CRC;
+            info.req_id = fc->req_id;
             info.addr = fc->addr;
             info.bytes = fc->bytes;
             info.crc = get_crc(& flash_io, fc->addr, fc->bytes);
@@ -321,7 +343,10 @@ bool flash_req_handler(Message* msg)
 #if defined(ALLOW_VERBOSE)
             if (debug_fn) {
                 char buff[32];
-                snprintf(buff, sizeof(buff), "flash_crc(%ld,%d,%X)\r\n", info.addr, info.bytes, info.crc);
+                snprintf(buff, sizeof(buff), 
+                        "flash_crc(r=%d,%ld,%d,%X)\r\n", 
+                        (int) fc->req_id,
+                        info.addr, info.bytes, info.crc);
                 debug(buff);
             }
 #endif // ALLOW_VERBOSE
@@ -343,6 +368,7 @@ bool flash_req_handler(Message* msg)
             FlashWritten info;
 
             info.cmd = FLASH_WRITTEN;
+            info.req_id = fc->req_id;
             info.addr = fc->addr;
             info.bytes = 0;
 
@@ -354,7 +380,11 @@ bool flash_req_handler(Message* msg)
 #if defined(ALLOW_VERBOSE)
             if (debug_fn) {
                 char buff[24];
-                snprintf(buff, sizeof(buff), "flash_write(%ld,%d)\r\n", info.addr, info.bytes);
+                snprintf(buff, sizeof(buff), 
+                        "flash_write(r=%d,%ld,%d)\r\n", 
+                        (int) info.req_id,
+                        info.addr, 
+                        info.bytes);
                 debug(buff);
             }
 #endif // ALLOW_VERBOSE
@@ -368,6 +398,7 @@ bool flash_req_handler(Message* msg)
 
             // FLASH READ
             info.cmd = FLASH_READ;
+            info.req_id = fc->req_id;
             info.addr = fc->addr;
             info.bytes = 0;
 
@@ -377,7 +408,8 @@ bool flash_req_handler(Message* msg)
             if (debug_fn) {
                 char buff[32];
                 snprintf(buff, sizeof(buff), 
-                        "flash_read_req(%ld,%d)\r\n",
+                        "flash_read_req(r=%d,%ld,%d)\r\n",
+                        (int) info.req_id,
                         info.addr,
                         info.bytes);
                 debug(buff);
@@ -393,7 +425,10 @@ bool flash_req_handler(Message* msg)
 #if defined(ALLOW_VERBOSE)
             if (debug_fn) {
                 char buff[32];
-                snprintf(buff, sizeof(buff), "set_fast_poll(%d)\r\n", fast_poll);
+                snprintf(buff, sizeof(buff), 
+                        "set_fast_poll(r=%d,%d)\r\n", 
+                        (int) fc->req_id,
+                        fast_poll);
                 debug(buff);
             }
 #endif // ALLOW_VERBOSE
@@ -405,7 +440,10 @@ bool flash_req_handler(Message* msg)
 #if defined(ALLOW_VERBOSE)
             if (debug_fn) {
                 char buff[32];
-                snprintf(buff, sizeof(buff), "flash_record_req(%d)\r\n", fc->slot);
+                snprintf(buff, sizeof(buff), 
+                        "flash_record_req(r=%d,%d)\r\n", 
+                        (int) fc->req_id,
+                        fc->slot);
                 debug(buff);
             }
 #endif // ALLOW_VERBOSE
@@ -413,6 +451,7 @@ bool flash_req_handler(Message* msg)
             FlashRecord info;
 
             info.cmd = FLASH_RECORD;
+            info.req_id = fc->req_id;
             info.slot = fc->slot;
 
             const uint16_t size = sizeof(info.record);
@@ -428,7 +467,10 @@ bool flash_req_handler(Message* msg)
 #if defined(ALLOW_VERBOSE)
             if (debug_fn) {
                 char buff[32];
-                snprintf(buff, sizeof(buff), "flash_record(%d)\r\n", fc->slot);
+                snprintf(buff, sizeof(buff), 
+                        "flash_record(r=%d,%d)\r\n", 
+                        (int) fc->req_id,
+                        fc->slot);
                 debug(buff);
             }
 #endif // ALLOW_VERBOSE
@@ -438,6 +480,7 @@ bool flash_req_handler(Message* msg)
             FlashWritten info;
 
             info.cmd = FLASH_WRITTEN;
+            info.req_id = fc->req_id;
             info.addr = offset;
             info.bytes = 0;
 
