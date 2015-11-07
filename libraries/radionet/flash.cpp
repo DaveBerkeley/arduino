@@ -306,7 +306,7 @@ bool flash_req_handler(Message* msg)
                 char buff[32];
                 snprintf(buff, sizeof(buff), 
                         "flash_info_req(r=%d)\r\n", 
-                        fc->req_id);
+                        (int) fc->req_id);
                 debug(buff);
             }
 #endif // ALLOW_VERBOSE
@@ -329,7 +329,7 @@ bool flash_req_handler(Message* msg)
                 char buff[32];
                 snprintf(buff, sizeof(buff), 
                         "flash_crc(r=%d,%ld,%d,%X)\r\n", 
-                        fc->req_id,
+                        (int) fc->req_id,
                         info.addr, info.bytes, info.crc);
                 debug(buff);
             }
@@ -366,7 +366,7 @@ bool flash_req_handler(Message* msg)
                 char buff[24];
                 snprintf(buff, sizeof(buff), 
                         "flash_write(r=%d,%ld,%d)\r\n", 
-                        info.req_id,
+                        (int) info.req_id,
                         info.addr, 
                         info.bytes);
                 debug(buff);
@@ -393,7 +393,7 @@ bool flash_req_handler(Message* msg)
                 char buff[32];
                 snprintf(buff, sizeof(buff), 
                         "flash_read_req(r=%d,%ld,%d)\r\n",
-                        info.req_id,
+                        (int) info.req_id,
                         info.addr,
                         info.bytes);
                 debug(buff);
@@ -411,7 +411,7 @@ bool flash_req_handler(Message* msg)
                 char buff[32];
                 snprintf(buff, sizeof(buff), 
                         "set_fast_poll(r=%d,%d)\r\n", 
-                        fc->req_id,
+                        (int) fc->req_id,
                         fast_poll);
                 debug(buff);
             }
@@ -426,7 +426,7 @@ bool flash_req_handler(Message* msg)
                 char buff[32];
                 snprintf(buff, sizeof(buff), 
                         "flash_record_req(r=%d,%d)\r\n", 
-                        fc->req_id,
+                        (int) fc->req_id,
                         fc->slot);
                 debug(buff);
             }
@@ -453,7 +453,7 @@ bool flash_req_handler(Message* msg)
                 char buff[32];
                 snprintf(buff, sizeof(buff), 
                         "flash_record(r=%d,%d)\r\n", 
-                        fc->req_id,
+                        (int) fc->req_id,
                         fc->slot);
                 debug(buff);
             }
