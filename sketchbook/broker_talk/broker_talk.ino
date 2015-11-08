@@ -257,14 +257,70 @@ static bool is_sleepy(uint8_t dev)
 static Packet packets[MAX_PACKETS];
 static Packet* host_packet = & packets[0];
 
-static Packet* next_tx_packet(bool not_sleepy=true)
+    /*
+    *
+    */
+
+typedef struct {
+    uint8_t     node;
+    uint32_t    timeout;
+}   AckTimer;
+
+static AckTimer ack_timers[MAX_PACKETS];
+
+#define ACK_TIMEOUT_MS 200
+
+static AckTimer* get_ack_timer(uint8_t node)
+{
+    for (uint8_t i = 0; i < MAX_PACKETS; ++i) {
+        AckTimer* at = & ack_timers[i];
+        if (at->node == node)
+            return at;
+    }
+    return 0;
+} 
+
+static void set_ack_timer(AckTimer* at, uint8_t node)
+{
+    at->node = node;
+    if (node) {
+        at->timeout = millis() + ACK_TIMEOUT_MS;
+    }
+}
+
+static bool waiting_for_ack(uint8_t node)
+{
+    AckTimer* at = get_ack_timer(node);
+    if (!at)
+        return false;
+    const bool waiting = at->timeout > millis();
+    if (!waiting)
+        at->node = 0; // free the timer
+    return waiting;
+}
+
+static void clear_ack_timer(uint8_t node)
+{
+    AckTimer* at = get_ack_timer(node);
+    if (!at)
+        return;
+    at->node = 0; // free the timer
+}
+
+    /*
+    *
+    */
+
+static Packet* next_wakey_packet()
 {
     // Find an allocated packet to send next
     for (int i = 0; i < MAX_PACKETS; ++i) {
         Packet* p = & packets[i];
         if (p == host_packet)
             continue;
-        if (not_sleepy && is_sleepy(p->node))
+        if (is_sleepy(p->node))
+            continue;
+        if (waiting_for_ack(p->node))
             continue;
         if (p->node != 0)
             return p;
@@ -313,48 +369,6 @@ static Packet* next_host_packet()
     if (p >= & packets[MAX_PACKETS])
         p = & packets[0];
     return p;
-}
-
-    /*
-    *
-    */
-
-typedef struct {
-    uint8_t     node;
-    uint32_t    timeout;
-}   AckTimer;
-
-static AckTimer ack_timers[MAX_PACKETS];
-
-#define ACK_TIMEOUT_MS 200
-
-static AckTimer* get_ack_timer(uint8_t node)
-{
-    for (uint8_t i = 0; i < MAX_PACKETS; ++i) {
-        AckTimer* at = & ack_timers[i];
-        if (at->node == node)
-            return at;
-    }
-    return 0;
-} 
-
-static void set_ack_timer(AckTimer* at, uint8_t node)
-{
-    at->node = node;
-    if (node) {
-        at->timeout = millis() + ACK_TIMEOUT_MS;
-    }
-}
-
-static bool waiting_for_ack(uint8_t node)
-{
-    AckTimer* at = get_ack_timer(node);
-    if (!at)
-        return false;
-    const bool waiting = at->timeout > millis();
-    if (!waiting)
-        at->node = 0; // free the timer
-    return waiting;
 }
 
     /*
@@ -571,24 +585,25 @@ void loop () {
       tx.set(FLASH_PERIOD);
       rf12_sendStart(dev, msg.data(), msg.size());
       clear_ack(dev);
+      clear_ack_timer(dev);
     }    
     return;
   }
 
   // read from host rx buffers
-  Packet* pm = next_tx_packet();
+  Packet* pm = next_wakey_packet();
   if (pm) {
-    if (!waiting_for_ack(pm->node)) {
-        if (rf12_canSend()) {
-          // transmit message to wakey node
-          tx.set(FLASH_PERIOD);
-          rf12_sendStart(pm->node, pm->data, pm->length);
-          pm->reset();
-          // set the waiting for ack timer
-          AckTimer* at = get_ack_timer(0);
-          if (at)
-            set_ack_timer(at, pm->node);
-        }
+    const uint8_t node = pm->node;
+    if (rf12_canSend()) {
+      // transmit message to wakey node
+      tx.set(FLASH_PERIOD);
+      rf12_sendStart(node, pm->data, pm->length);
+      pm->reset();
+      // set the waiting for ack timer
+      AckTimer* at = get_ack_timer(0);
+      if (at) {
+        set_ack_timer(at, node);
+      }
     }
   }
 
