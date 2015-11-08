@@ -391,7 +391,7 @@ static void add_packet_info(Message* msg)
     msg->append(0, & d, sizeof(d));
 }
 
-static void ack_packet_send()
+static void notify_packet_send()
 {
   // Inform host of packet send status
   Message msg(make_mid(), GATEWAY_ID);
@@ -568,7 +568,7 @@ void loop () {
               pm->reset();
               clear_ack(dev);
               // notify host that packet was sent
-              ack_packet_send();
+              notify_packet_send();
               return;
           }
       }
@@ -604,6 +604,8 @@ void loop () {
       if (at) {
         set_ack_timer(at, node);
       }
+      // notify host that packet was sent
+      notify_packet_send();
     }
   }
 
