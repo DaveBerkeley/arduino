@@ -338,15 +338,24 @@ bool flash_req_handler(Message* msg)
             info.req_id = fc->req_id;
             info.addr = fc->addr;
             info.bytes = fc->bytes;
-            info.crc = get_crc(& flash_io, fc->addr, fc->bytes);
 
 #if defined(ALLOW_VERBOSE)
             if (debug_fn) {
                 char buff[32];
                 snprintf(buff, sizeof(buff), 
-                        "flash_crc(r=%d,%ld,%d,%X)\r\n", 
+                        "flash_crc(r=%d,%ld,%d,", 
                         (int) fc->req_id,
-                        info.addr, info.bytes, info.crc);
+                        info.addr, info.bytes);
+                debug(buff);
+            }
+#endif // ALLOW_VERBOSE
+
+            info.crc = get_crc(& flash_io, fc->addr, fc->bytes);
+
+#if defined(ALLOW_VERBOSE)
+            if (debug_fn) {
+                char buff[32];
+                snprintf(buff, sizeof(buff), "%X)\r\n", info.crc);
                 debug(buff);
             }
 #endif // ALLOW_VERBOSE
@@ -374,8 +383,6 @@ bool flash_req_handler(Message* msg)
 
             // Do the write
             flash_save(& flash_io, & info.bytes, fc->addr, fc->bytes, fc->data);
-            // CRC the EEPROM that we've just written
-            info.crc = get_crc(& flash_io, fc->addr, fc->bytes);            
 
 #if defined(ALLOW_VERBOSE)
             if (debug_fn) {
@@ -388,6 +395,9 @@ bool flash_req_handler(Message* msg)
                 debug(buff);
             }
 #endif // ALLOW_VERBOSE
+
+            // CRC the EEPROM that we've just written
+            info.crc = get_crc(& flash_io, fc->addr, fc->bytes);            
 
             send_flash_message(& info, sizeof(info));
             break;
