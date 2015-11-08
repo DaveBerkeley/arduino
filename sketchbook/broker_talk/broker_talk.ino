@@ -261,10 +261,10 @@ static Packet* next_tx_packet(bool not_sleepy=true)
 {
     // Find an allocated packet to send next
     for (int i = 0; i < MAX_PACKETS; ++i) {
-        if (not_sleepy && is_sleepy(i))
-            continue;
         Packet* p = & packets[i];
         if (p == host_packet)
+            continue;
+        if (not_sleepy && is_sleepy(p->node))
             continue;
         if (p->node != 0)
             return p;
@@ -313,6 +313,48 @@ static Packet* next_host_packet()
     if (p >= & packets[MAX_PACKETS])
         p = & packets[0];
     return p;
+}
+
+    /*
+    *
+    */
+
+typedef struct {
+    uint8_t     node;
+    uint32_t    timeout;
+}   AckTimer;
+
+static AckTimer ack_timers[MAX_PACKETS];
+
+#define ACK_TIMEOUT_MS 200
+
+static AckTimer* get_ack_timer(uint8_t node)
+{
+    for (uint8_t i = 0; i < MAX_PACKETS; ++i) {
+        AckTimer* at = & ack_timers[i];
+        if (at->node == node)
+            return at;
+    }
+    return 0;
+} 
+
+static void set_ack_timer(AckTimer* at, uint8_t node)
+{
+    at->node = node;
+    if (node) {
+        at->timeout = millis() + ACK_TIMEOUT_MS;
+    }
+}
+
+static bool waiting_for_ack(uint8_t node)
+{
+    AckTimer* at = get_ack_timer(node);
+    if (!at)
+        return false;
+    const bool waiting = at->timeout > millis();
+    if (!waiting)
+        at->node = 0; // free the timer
+    return waiting;
 }
 
     /*
@@ -536,14 +578,16 @@ void loop () {
   // read from host rx buffers
   Packet* pm = next_tx_packet();
   if (pm) {
-    if (is_sleepy(pm->node)) {
-        // keep packet in queue to send to sleepy node
-    } else {
+    if (!waiting_for_ack(pm->node)) {
         if (rf12_canSend()) {
-          // transmit waiting message
+          // transmit message to wakey node
           tx.set(FLASH_PERIOD);
           rf12_sendStart(pm->node, pm->data, pm->length);
           pm->reset();
+          // set the waiting for ack timer
+          AckTimer* at = get_ack_timer(0);
+          if (at)
+            set_ack_timer(at, pm->node);
         }
     }
   }
