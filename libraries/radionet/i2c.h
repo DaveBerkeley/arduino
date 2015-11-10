@@ -45,10 +45,9 @@ typedef struct {
 }   I2C;
 
 // Low level I2C io functions
-void i2c_sda_out(I2C* i2c, bool data);
-bool i2c_sda_in(I2C* i2c);
-void i2c_scl_hi(I2C* i2c);
-void i2c_scl_lo(I2C* i2c);
+void i2c_sda(I2C* i2c, bool data);
+bool i2c_get(I2C* i2c);
+void i2c_scl(I2C* i2c, bool state);
 
 // High level I2C functions
 void i2c_init(I2C* i2c);

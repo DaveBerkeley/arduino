@@ -210,22 +210,48 @@ void pin_test()
         10, // us delay
     };
 
-    while (0) {
+#if 1
     i2c_init(& i2c);
-    Serial.print(i2c_is_present(& i2c));
-    Serial.print("\r\n");
-    delay_us(10000000);
-    }
+    delay_us(10000);
+    while (1) {
 
-#if 0
-    char buff[16];
-    i2c_load(& i2c, 0, 0, buff, sizeof(buff));
+        //
+        i2c_start(& i2c, i2c.addr);
+        i2c_write(& i2c, 0); // page
+        i2c_write(& i2c, 16); // offset
+
+        // Sr ...
+        i2c_scl(& i2c, true);
+        i2c_sda(& i2c, false);
+        i2c_scl(& i2c, false);
+
+        //
+        i2c_start(& i2c, 0x01 | i2c.addr);
+
+        for (int i = 0; i < 9; i++) {
+            i2c_read(& i2c, 0);
+        }
+        i2c_read(& i2c, 1);
  
-    for (uint16_t i = 0; i < sizeof(buff); ++i) {
-        Serial.print(int(buff[i]));
-        Serial.print(" ");
+        i2c_stop(& i2c);
+
+        //i2c_is_present(& i2c);
+        //delay_us(10000);
+ 
+        //const uint8_t page = 0;
+        //const uint8_t offset = 0;
+        //uint8_t buff[2];
+        //i2c_load(& i2c, page, offset, buff, sizeof(buff));
+        delay_us(10000);
     }
-    Serial.print("\r\n");
+#else
+    while (1) {
+        const uint8_t page = 0;
+        const uint8_t offset = 16;
+        uint8_t buff[9];
+        delay_us(10000);
+        mem->load(page, offset, buff, sizeof(buff));
+    }
 #endif
 }
 

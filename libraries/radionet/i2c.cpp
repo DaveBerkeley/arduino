@@ -105,8 +105,8 @@ bool i2c_start(I2C* i2c, uint8_t addr)
 //    sclHi();
 //    sdaOut(0);
 //    return write(addr);
-    i2c_scl(i2c, false);
-    i2c_scl(i2c, true);
+    //i2c_scl(i2c, false);
+    //i2c_scl(i2c, true);
     i2c_sda(i2c, false);
     return i2c_write(i2c, addr);
 }
