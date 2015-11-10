@@ -23,6 +23,9 @@
 #include <radiodev.h>
 #include <radioutils.h>
 
+#define INT_PIN 3
+#define LED_PIN 9
+
   /*
    *
    */
@@ -30,44 +33,35 @@
 // needed by the watchdog code
 EMPTY_INTERRUPT(WDT_vect);
 
+static volatile uint32_t pulses;
+
+static void on_pulse()
+{
+    static bool led = true;
+    digitalWrite(LED_PIN, led = !led);
+    pulses += 1;
+}
+
   /*
   *
   */
   
 // node -> gateway data
-#define PRESENT_PULSE (1 << 1)
-#define PRESENT_VCC (1 << 2)
+#define PRESENT_PULSE (1 << 0)
+#define PRESENT_VCC (1 << 1)
 
 class PulseRadio : public RadioDev
 {
-  Port led;
-
-  void ok_led(byte on) 
-  {
-    led.digiWrite(on);
-  }
-
-  void test_led(byte on) 
-  {
-    led.digiWrite2(!on);
-  }
 
 public:
 
   PulseRadio()
-  : RadioDev(GATEWAY_ID),
-    led(2)
+  : RadioDev(GATEWAY_ID)
   {
   }
 
   virtual void init()
   {
-    ok_led(0);
-    test_led(0);
-
-    led.mode(OUTPUT);  
-    led.mode2(OUTPUT);  
-
     RadioDev::init();
 
     // use the 1.1V internal ref for the ADC
@@ -81,18 +75,16 @@ public:
 
   virtual void append_message(Message* msg)
   {
-    const uint8_t pulse = 1;
-    msg->append(PRESENT_PULSE, & pulse, sizeof(pulse));
+    const uint32_t p = pulses;
+    msg->append(PRESENT_PULSE, & p, sizeof(p));
+
     const uint16_t vcc = read_vcc();
     msg->append(PRESENT_VCC, & vcc, sizeof(vcc));
   }
 
   virtual void set_led(LED idx, bool state)
   {
-    switch (idx) {
-      case   OK   :  ok_led(state);  break;
-      case   TEST :  test_led(state);  break;
-    }
+    ; // Do nothing
   }
   
   virtual void loop(void)
@@ -106,11 +98,16 @@ static PulseRadio radio;
  /*
   *
   */
-  
+
 void setup() 
 {
   Serial.begin(57600);
   Serial.println(radio.banner());
+    
+  pinMode(INT_PIN, INPUT);
+  attachInterrupt(1, on_pulse, RISING);
+
+  pinMode(LED_PIN, OUTPUT);
 
   radio.init();
 }
@@ -121,7 +118,18 @@ void setup()
 
 void loop()
 {
-  radio.loop();
+    radio.loop();
+    static uint32_t was = -1;
+
+    if (pulses != was) {
+        Serial.print("P:");
+        Serial.print(pulses);
+        Serial.print("\r\n");
+        was = pulses;
+    }
+
+    //Serial.print(digitalRead(INT_PIN));
+    //Serial.print("\r\n");
 }
 
 // FIN
