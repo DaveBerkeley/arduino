@@ -201,6 +201,7 @@ static FlashIO flash_io = {
 
 void pin_test()
 {
+#if 0
     Pin d4 = { & DDRD, & PORTD, & PIND, 1<<4 };
     Pin a0 = { & DDRC, & PORTC, & PINC, 1<<0 };
 
@@ -215,33 +216,25 @@ void pin_test()
     delay_us(10000);
     while (1) {
 
-        //
-        i2c_start(& i2c, i2c.addr);
+        // Working Read ... :)
+        i2c_start(& i2c, i2c.addr); // addr write
         i2c_write(& i2c, 0); // page
-        i2c_write(& i2c, 16); // offset
+        i2c_write(& i2c, 48); // offset
 
         // Sr ...
+        // Why is this needed ?
         i2c_scl(& i2c, true);
         i2c_sda(& i2c, false);
         i2c_scl(& i2c, false);
 
         //
-        i2c_start(& i2c, 0x01 | i2c.addr);
+        i2c_start(& i2c, 0x01 | i2c.addr); // addr read
 
         for (int i = 0; i < 9; i++) {
-            i2c_read(& i2c, 0);
+            i2c_read(& i2c, 0); // read a byte
         }
-        i2c_read(& i2c, 1);
+        i2c_read(& i2c, 1); // last one does a NAK,STOP
  
-        i2c_stop(& i2c);
-
-        //i2c_is_present(& i2c);
-        //delay_us(10000);
- 
-        //const uint8_t page = 0;
-        //const uint8_t offset = 0;
-        //uint8_t buff[2];
-        //i2c_load(& i2c, page, offset, buff, sizeof(buff));
         delay_us(10000);
     }
 #else
@@ -252,6 +245,7 @@ void pin_test()
         delay_us(10000);
         mem->load(page, offset, buff, sizeof(buff));
     }
+#endif
 #endif
 }
 
