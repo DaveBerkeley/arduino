@@ -199,17 +199,41 @@ static FlashIO flash_io = {
      *
      */
 
+void x_load(I2C* i2c, uint16_t page, uint8_t offset, uint8_t* buff, uint8_t count)
+{
+    while (get_ms() < i2c->next_save)
+        ;
+
+    // Address Write
+    i2c_start(i2c, i2c->addr);
+    i2c_write(i2c, page);
+    i2c_write(i2c, offset);
+
+    // Address Read
+    i2c_start(i2c, 0x01 | i2c->addr);
+
+    //while (--count >= 0) {
+    for (int i = 0; i < (count-1); ++i) {
+        *buff++ = i2c_read(i2c, 0); // read a byte
+    }
+    *buff++ = i2c_read(i2c, 1); // STOP
+}
+
 void pin_test()
 {
-#if 0
+#if 1
     Pin d4 = { & DDRD, & PORTD, & PIND, 1<<4 };
     Pin a0 = { & DDRC, & PORTC, & PINC, 1<<0 };
 
     I2C i2c = {
         & d4, & a0,
         0x50 << 1,
-        10, // us delay
+        4, // us delay
     };
+
+    uint16_t page = 100;
+    uint8_t offset = 0;
+    uint8_t buff[10];
 
 #if 1
     i2c_init(& i2c);
@@ -217,31 +241,21 @@ void pin_test()
     while (1) {
 
         // Working Read ... :)
-        i2c_start(& i2c, i2c.addr); // addr write
-        i2c_write(& i2c, 0); // page
-        i2c_write(& i2c, 48); // offset
-
-        // Sr ...
-        // Why is this needed ?
-        i2c_scl(& i2c, true);
-        i2c_sda(& i2c, false);
-        i2c_scl(& i2c, false);
-
-        //
-        i2c_start(& i2c, 0x01 | i2c.addr); // addr read
-
-        for (int i = 0; i < 9; i++) {
-            i2c_read(& i2c, 0); // read a byte
-        }
-        i2c_read(& i2c, 1); // last one does a NAK,STOP
+        x_load(& i2c, page, offset, buff, sizeof(buff));
  
-        delay_us(10000);
+        delay_us(100000);
+
+        offset += 4;
+        if (offset > (256 - 4)) {
+            offset = 0;
+            page += 1;
+            if (page >= 512)
+                page = 0;
+        }
     }
 #else
     while (1) {
-        const uint8_t page = 0;
-        const uint8_t offset = 16;
-        uint8_t buff[9];
+        uint8_t buff[4];
         delay_us(10000);
         mem->load(page, offset, buff, sizeof(buff));
     }

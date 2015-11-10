@@ -91,9 +91,6 @@ void i2c_scl(I2C* i2c, bool state)
 
 void i2c_init(I2C* i2c)
 {
-//    sdaOut(1);
-//    mode2(OUTPUT);
-//    sclHi();
     i2c_sda(i2c, true);
     pin_mode(i2c->scl, true);
     i2c_scl(i2c, true);
@@ -101,21 +98,13 @@ void i2c_init(I2C* i2c)
 
 bool i2c_start(I2C* i2c, uint8_t addr)
 {
-//    sclLo();
-//    sclHi();
-//    sdaOut(0);
-//    return write(addr);
-    //i2c_scl(i2c, false);
-    //i2c_scl(i2c, true);
+    i2c_scl(i2c, true);
     i2c_sda(i2c, false);
     return i2c_write(i2c, addr);
 }
 
 void i2c_stop(I2C* i2c)
 {
-//    sdaOut(0);
-//    sclHi();
-//    sdaOut(1);
     i2c_sda(i2c, false);
     i2c_scl(i2c, true);
     i2c_sda(i2c, true);
@@ -123,17 +112,6 @@ void i2c_stop(I2C* i2c)
 
 bool i2c_write(I2C* i2c, uint8_t data)
 {
-//    sclLo();
-//    for (uint8_t mask = 0x80; mask != 0; mask >>= 1) {
-//        sdaOut(data & mask);
-//        sclHi();
-//        sclLo();
-//    }
-//    sdaOut(1);
-//    sclHi();
-//    uint8_t ack = ! sdaIn();
-//    sclLo();
-//    return ack
     i2c_scl(i2c, false);
     for (uint8_t mask = 0x80; mask; mask >>= 1) {
         i2c_sda(i2c, data & mask);
