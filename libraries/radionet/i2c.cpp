@@ -67,10 +67,6 @@ void i2c_init(I2C* i2c)
     i2c_sda(i2c, true);
     pin_mode(i2c->scl, true);
     i2c_scl(i2c, true);
-    if (i2c->debug) {
-        pin_set(i2c->debug, true);
-        pin_mode(i2c->debug, true);
-    }
     if (i2c->trig) {
         pin_set(i2c->trig, true);
         pin_mode(i2c->trig, true);
@@ -141,15 +137,14 @@ bool i2c_is_present(I2C* i2c)
 static bool x_start(I2C* i2c, uint16_t page)
 {
     const uint8_t sel = i2c->addr + ((page > 255) ? 0x02 : 0x00);
+    //  EEPROM will return NAK while write is in progress.
+    //
     //  Use polling sequence until device returns ack.
-    int retry = 0;
-    while (true) {
+    for (int retry = 0; retry < 100; ++retry) {
         if (i2c_start(i2c, sel))
             return true;
-        if (retry++ == 100)
-            return false;
-        pin_pulse(i2c->debug);
     }
+    return false;
 }
 
 void i2c_load(I2C* i2c, uint16_t page, uint8_t offset, void* buff, int count)

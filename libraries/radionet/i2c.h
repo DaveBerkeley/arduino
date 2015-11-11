@@ -32,7 +32,6 @@ typedef struct {
     uint8_t     addr;
     uint16_t    scl_delay;
     PinIo*      trig;
-    PinIo*      debug;
 }   I2C;
 
 // Low level I2C io functions
