@@ -29,7 +29,6 @@
 
 #include "flash.h"
 #include "radionet.h"
-#include "i2c.h"
 
 static void (*flash_send_fn)(const void* data, int length) = 0;
 
@@ -209,7 +208,7 @@ static FlashIO flash_io = {
      *
      */
 
-bool flash_init(MemoryPlug* m, 
+bool flash_init(I2C* i2c, 
     void (*text_fn)(const char*), 
     void (*send_fn)(const void* data, int length))
 {
@@ -218,9 +217,7 @@ bool flash_init(MemoryPlug* m,
     debug_fn = text_fn;
 #endif
 
-    i2c_init(& i2c);
-
-    if (i2c_is_present(& i2c)) {
+    if (i2c_is_present(i2c)) {
 #if defined(ALLOW_VERBOSE)
         debug("flash_init()\r\n");
 #endif

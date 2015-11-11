@@ -66,13 +66,13 @@ DallasTemperature sensors(&oneWire);
 #define RELAY 6
 #define RELAY_LED 9
 
-class Pin
+class Pinx
 {
   int m_pin;
   RadioDev::LED m_led;
   int16_t  m_count;
 public:
-  Pin(int pin, RadioDev::LED led)
+  Pinx(int pin, RadioDev::LED led)
   : m_pin(pin),
     m_led(led),
     m_count(0)
@@ -108,9 +108,9 @@ public:
 
 #define NPINS 2
 
-static Pin pins[NPINS] = {
-  Pin(OK_LED, RadioDev::OK),
-  Pin(TEST_LED, RadioDev::TEST),
+static Pinx pins[NPINS] = {
+  Pinx(OK_LED, RadioDev::OK),
+  Pinx(TEST_LED, RadioDev::TEST),
 };
 
 static void set_led(RadioDev::LED led, bool state)
@@ -146,13 +146,27 @@ static void debug(const char* text)
   Serial.print(text);
 }
 
-  /*
-  *
-  */
+    /*
+     *  I2C Interface.
+     */
 
-// JeeLib Memory Plug handling
-static PortI2C i2cBus(1);
-static MemoryPlug mem(i2cBus);
+static Pin d4 = { & DDRD, & PORTD, & PIND, 1<<4 };
+static Pin d6 = { & DDRD, & PORTD, & PIND, 1<<6 };
+//static Pin d7 = { & DDRD, & PORTD, & PIND, 1<<7 };
+static Pin a0 = { & DDRC, & PORTC, & PINC, 1<<0 };
+
+static I2C i2c = {
+    & d4,   //  SDA
+    & a0,   //  SCL
+    0x50 << 1,
+    3, // us delay
+    & d6,   //  TRIG
+    // & d7,   //  DEBUG
+};
+
+    /*
+    *
+    */
 
 class RadioRelay : public RadioDev
 {
@@ -188,7 +202,9 @@ public:
     init_leds();
     set_relay(0);
 
-    flash_init(& mem, ::debug);
+    i2c_init(& i2c);
+
+    flash_init(& i2c, ::debug);
   }
 
   virtual const char* banner()

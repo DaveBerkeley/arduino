@@ -17,9 +17,9 @@
  USA
 */
 
-class MemoryPlug;
+#include "i2c.h"
 
-bool flash_init(MemoryPlug* mem, 
+bool flash_init(I2C* mem, 
         void (*debug_fn)(const char* text), 
         void (*send_fn)(const void* data, int length)=0);
 
