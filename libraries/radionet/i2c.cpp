@@ -58,6 +58,14 @@ bool pin_get(const Pin* pin)
     return (pin->mask & *(pin->pin)) ? true : false;
 }
 
+void pin_pulse(const Pin* pin)
+{
+    if (pin) {
+        pin_set(pin, false);
+        pin_set(pin, true);
+    }
+}
+
 extern "C" {
 extern unsigned long millis(void);
 }
@@ -70,7 +78,6 @@ void i2c_sda(I2C* i2c, bool data)
 {
     // pull low, float hi
     pin_mode(i2c->sda, !data);
-    // do I need to do this for hi?
     pin_set(i2c->sda, data);
 }
 
@@ -81,7 +88,8 @@ bool i2c_get(I2C* i2c)
 
 void i2c_scl(I2C* i2c, bool state)
 {
-    delay_us(i2c->us);
+    if (i2c->scl_delay)
+        delay_us(i2c->scl_delay);
     pin_set(i2c->scl, state);
 }
 
@@ -94,10 +102,20 @@ void i2c_init(I2C* i2c)
     i2c_sda(i2c, true);
     pin_mode(i2c->scl, true);
     i2c_scl(i2c, true);
+    if (i2c->debug) {
+        pin_set(i2c->debug, true);
+        pin_mode(i2c->debug, true);
+    }
+    if (i2c->trig) {
+        pin_set(i2c->trig, true);
+        pin_mode(i2c->trig, true);
+    }
 }
 
 bool i2c_start(I2C* i2c, uint8_t addr)
 {
+    pin_pulse(i2c->trig);
+    if (i2c->trig) delay_us(2);
     i2c_scl(i2c, true);
     i2c_sda(i2c, false);
     return i2c_write(i2c, addr);
@@ -127,20 +145,6 @@ bool i2c_write(I2C* i2c, uint8_t data)
 
 uint8_t i2c_read(I2C* i2c, bool last)
 {
-//    uint8_t data = 0;
-//    for (uint8_t mask = 0x80; mask != 0; mask >>= 1) {
-//        sclHi();
-//        if (sdaIn())
-//            data |= mask;
-//        sclLo();
-//    }
-//    sdaOut(last);
-//    sclHi();
-//    sclLo();
-//    if (last)
-//        stop();
-//    sdaOut(1);
-//    return data;
     uint8_t data = 0;
     for (uint8_t mask = 0x80; mask; mask >>= 1) {
         i2c_scl(i2c, true);
@@ -153,15 +157,13 @@ uint8_t i2c_read(I2C* i2c, bool last)
     i2c_scl(i2c, false);
     if (last)
         i2c_stop(i2c);
-    i2c_sda(i2c, true);
+    else
+        i2c_sda(i2c, true);
     return data;
 }
 
 bool i2c_is_present(I2C* i2c)
 {
-//    byte ok = send();
-//    stop();
-//    return ok;
     const bool ok = i2c_start(i2c, i2c->addr);
     i2c_stop(i2c);
     return ok;
@@ -171,39 +173,56 @@ bool i2c_is_present(I2C* i2c)
      *
      */
 
+static uint8_t dev_select(I2C* i2c, uint16_t page)
+{
+    return i2c->addr + ((page > 255) ? 0x02 : 0x00);
+}
+
 void i2c_load(I2C* i2c, uint16_t page, uint8_t offset, void* buff, int count)
 {
-//    // also don't load right after a save, see http://forum.jeelabs.net/node/469
-//    while (millis() < nextSave)
-//        //;
-//
-//    setAddress(0x50 + (page >> 8));
-//    send();
-//    write((byte) page);
-//    write(offset);
-//    receive();
-//    byte* p = (byte*) buf;
-//    while (--count >= 0)
-//        *p++ = read(count == 0);
-//    stop();
+    //while (get_ms() < i2c->next_save)
+    //    ;
 
-    // also don't load right after a save, see http://forum.jeelabs.net/node/469
-    while (get_ms() < i2c->next_save)
-        ;
-
-    const uint8_t addr = 0x50 + (page >> 8);
-    i2c_start(i2c, addr);
-    i2c_write(i2c, (uint8_t) page);
+    // Address Write
+    while (!i2c_start(i2c, dev_select(i2c, page)))
+    {
+        // TODO : Implement timeout
+        pin_pulse(i2c->debug);
+    }
+    i2c_write(i2c, page);
     i2c_write(i2c, offset);
-    i2c_start(i2c, addr | 1);
-    uint8_t* p = (uint8_t*) buff;
-    while (--count >= 0)
-        *p++ = i2c_read(i2c, count == 0);
-    i2c_stop(i2c);
+
+    // Address Read
+    i2c_start(i2c, 0x01 | i2c->addr);
+
+    uint8_t* b = (uint8_t*) buff;
+    while (--count >= 0) {
+        *b++ = i2c_read(i2c, count == 0);
+    }
 }
 
 void i2c_save(I2C* i2c, uint16_t page, uint8_t offset, const void* buff, int count)
 {
+    // don't do back-to-back saves, last one must have had time to finish!
+    //while (millis() < i2c->next_save)
+    //    ;
+
+    // Address Write
+    while (!i2c_start(i2c, dev_select(i2c, page)))
+    {
+        // TODO : Implement timeout
+        pin_pulse(i2c->debug);
+    }
+    i2c_write(i2c, page);
+    i2c_write(i2c, offset);
+
+    const uint8_t* b = (const uint8_t*) buff;
+    while (count--) {
+        i2c_write(i2c, *b++);
+    }
+    i2c_stop(i2c);
+
+    //i2c->next_save = millis() + 10;
 }
 
     /*

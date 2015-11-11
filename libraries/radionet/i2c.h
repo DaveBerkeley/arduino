@@ -32,16 +32,24 @@ typedef struct {
 }   Pin;
 
 // Pin io functions
+#if 0
 void pin_mode(const Pin* pin, bool output);
 void pin_set(const Pin* pin, bool state);
 bool pin_get(const Pin* pin);
+#endif
+
+    /*
+     *  I2C Interface
+     */
 
 typedef struct {
     Pin*    sda;
     Pin*    scl;
+    Pin*    trig;
+    Pin*    debug;
     uint8_t addr;
-    uint16_t us;
-    uint32_t next_save;
+    uint16_t scl_delay;
+    //uint32_t next_save;
 }   I2C;
 
 // Low level I2C io functions
