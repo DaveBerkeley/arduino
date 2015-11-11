@@ -71,8 +71,7 @@ typedef struct {
 
 typedef struct {
     _FlashInfo* info;
-    void (*load)(uint16_t page, uint8_t offset, void* buff, int count);
-    void (*save)(uint16_t page, uint8_t offset, const void* buff, int count);
+    I2C* i2c;
 }   FlashIO;
 
 // Block Iterator to handle Flash page boundaries.

@@ -171,44 +171,10 @@ bool flash_fast_poll()
 static FlashInfo flash_info = { FLASH_INFO, };
 
     /*
-     *  I2C Interface.
-     */
-
-static Pin d4 = { & DDRD, & PORTD, & PIND, 1<<4 };
-static Pin d6 = { & DDRD, & PORTD, & PIND, 1<<6 };
-//static Pin d7 = { & DDRD, & PORTD, & PIND, 1<<7 };
-static Pin a0 = { & DDRC, & PORTC, & PINC, 1<<0 };
-
-static I2C i2c = {
-    & d4,   //  SDA
-    & a0,   //  SCL
-    0x50 << 1,
-    3, // us delay
-    & d6,   //  TRIG
-    // & d7,   //  DEBUG
-};
-
-static void xi2c_load(uint16_t page, uint8_t offset, void* buff, int count)
-{
-    i2c_load(& i2c, page, offset, buff, count);
-}
-
-static void xi2c_save(uint16_t page, uint8_t offset, const void* buff, int count)
-{
-    i2c_save(& i2c, page, offset, buff, count);
-}
-
-static FlashIO flash_io = {
-    & flash_info.info,
-    xi2c_load,
-    xi2c_save,
-};
-
-    /*
      *
      */
 
-bool flash_init(I2C* i2c, 
+bool flash_init(FlashIO* io, 
     void (*text_fn)(const char*), 
     void (*send_fn)(const void* data, int length))
 {
@@ -217,7 +183,10 @@ bool flash_init(I2C* i2c,
     debug_fn = text_fn;
 #endif
 
-    if (i2c_is_present(i2c)) {
+    io->info = & flash_info.info;
+    i2c_init(io->i2c);
+
+    if (i2c_is_present(io->i2c)) {
 #if defined(ALLOW_VERBOSE)
         debug("flash_init()\r\n");
 #endif
@@ -240,7 +209,7 @@ bool flash_init(I2C* i2c,
 static void crcer(const FlashIO* io, void* obj, uint16_t block, uint16_t offset, uint16_t bytes, uint8_t*) {
     uint8_t buff[bytes];
 
-    io->load(block, offset, buff, bytes);
+    i2c_load(io->i2c, block, offset, buff, bytes);
 
     uint16_t* crc = (uint16_t*) obj;
     for (uint16_t i = 0; i < bytes; ++i) {
@@ -276,7 +245,7 @@ void send_flash_message(const void* data, int length)
      *  Flash Message handler.
      */
 
-bool flash_req_handler(Message* msg)
+bool flash_req_handler(FlashIO* io, Message* msg)
 {
     uint8_t* payload = (uint8_t*) msg->payload();
 
@@ -322,7 +291,7 @@ bool flash_req_handler(Message* msg)
             }
 #endif // ALLOW_VERBOSE
 
-            info.crc = get_crc(& flash_io, fc->addr, fc->bytes);
+            info.crc = get_crc(io, fc->addr, fc->bytes);
 
 #if defined(ALLOW_VERBOSE)
             if (debug_fn) {
@@ -354,7 +323,7 @@ bool flash_req_handler(Message* msg)
             info.bytes = 0;
 
             // Do the write
-            flash_save(& flash_io, & info.bytes, fc->addr, fc->bytes, fc->data);
+            flash_save(io, & info.bytes, fc->addr, fc->bytes, fc->data);
 
 #if defined(ALLOW_VERBOSE)
             if (debug_fn) {
@@ -369,7 +338,7 @@ bool flash_req_handler(Message* msg)
 #endif // ALLOW_VERBOSE
 
             // CRC the EEPROM that we've just written
-            info.crc = get_crc(& flash_io, fc->addr, fc->bytes);            
+            info.crc = get_crc(io, fc->addr, fc->bytes);            
 
             send_flash_message(& info, sizeof(info));
             break;
@@ -384,7 +353,7 @@ bool flash_req_handler(Message* msg)
             info.addr = fc->addr;
             info.bytes = 0;
 
-            flash_read(& flash_io, & info.bytes, fc->addr, min(fc->bytes, sizeof(info.data)), info.data);
+            flash_read(io, & info.bytes, fc->addr, min(fc->bytes, sizeof(info.data)), info.data);
     
 #if defined(ALLOW_VERBOSE)
             if (debug_fn) {
@@ -440,7 +409,7 @@ bool flash_req_handler(Message* msg)
             const uint32_t offset = fc->slot * size;
             uint16_t xferred = 0;
             // Read Record
-            flash_read(& flash_io, & xferred, offset, size, (uint8_t*) & info.record);
+            flash_read(io, & xferred, offset, size, (uint8_t*) & info.record);
             send_flash_message(& info, sizeof(info));
             break;
         }
@@ -468,9 +437,9 @@ bool flash_req_handler(Message* msg)
 
             // Do the write
             if (fc->slot <= MAX_SLOTS) {
-                flash_save(& flash_io, & info.bytes, offset, size, (uint8_t*) & fc->record);
+                flash_save(io, & info.bytes, offset, size, (uint8_t*) & fc->record);
                 // CRC the EEPROM that we've just written
-                info.crc = get_crc(& flash_io, offset, size);            
+                info.crc = get_crc(io, offset, size);            
             }
             send_flash_message(& info, sizeof(info));
             break;

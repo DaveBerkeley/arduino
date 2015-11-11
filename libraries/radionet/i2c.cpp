@@ -249,7 +249,7 @@ static void saver(const FlashIO* io, void* obj, uint16_t block, uint16_t offset,
 {
     uint16_t* xfered = (uint16_t*) obj;
 
-    io->save(block, offset, data, bytes);
+    i2c_save(io->i2c, block, offset, data, bytes);
     *xfered += bytes;
 }
 
@@ -266,7 +266,7 @@ static void reader(const FlashIO* io, void* obj, uint16_t block, uint16_t offset
 {
     uint16_t* xfered = (uint16_t*) obj;
 
-    io->load(block, offset, data, bytes);
+    i2c_load(io->i2c, block, offset, data, bytes);
     *xfered += bytes;
 }
 

@@ -19,13 +19,13 @@
 
 #include "i2c.h"
 
-bool flash_init(I2C* mem, 
+bool flash_init(FlashIO* io, 
         void (*debug_fn)(const char* text), 
         void (*send_fn)(const void* data, int length)=0);
 
 class Message;
 
-bool flash_req_handler(Message* msg);
+bool flash_req_handler(FlashIO* io, Message* msg);
 
 bool flash_fast_poll();
 

@@ -164,6 +164,11 @@ static I2C i2c = {
     // & d7,   //  DEBUG
 };
 
+static FlashIO io = {
+    0,  //  filled in by the library
+    & i2c,
+};
+
     /*
     *
     */
@@ -202,9 +207,7 @@ public:
     init_leds();
     set_relay(0);
 
-    i2c_init(& i2c);
-
-    flash_init(& i2c, ::debug);
+    flash_init(& io, ::debug);
   }
 
   virtual const char* banner()
@@ -241,7 +244,7 @@ public:
     snprintf(buff, sizeof(buff), "%ld msg(%d,%X)\r\n", millis(), a, f);
     debug(buff);
  
-    if (flash_req_handler(msg))
+    if (flash_req_handler(& io, msg))
         return;
 
     bool r;
