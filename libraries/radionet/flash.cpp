@@ -27,14 +27,10 @@
 #include <util/crc16.h>
 #include <avr/wdt.h>
 
-// JeeLib memory interface
-#include "Ports.h"
-
 #include "flash.h"
 #include "radionet.h"
 #include "i2c.h"
 
-static MemoryPlug* mem;
 static void (*flash_send_fn)(const void* data, int length) = 0;
 
 #define ALLOW_VERBOSE
@@ -181,16 +177,16 @@ static FlashInfo flash_info = { FLASH_INFO, };
 
 static Pin d4 = { & DDRD, & PORTD, & PIND, 1<<4 };
 static Pin d6 = { & DDRD, & PORTD, & PIND, 1<<6 };
-static Pin d7 = { & DDRD, & PORTD, & PIND, 1<<7 };
+//static Pin d7 = { & DDRD, & PORTD, & PIND, 1<<7 };
 static Pin a0 = { & DDRC, & PORTC, & PINC, 1<<0 };
 
 static I2C i2c = {
     & d4,   //  SDA
     & a0,   //  SCL
-    & d6,   //  TRIG
-    & d7,   //  DEBUG
     0x50 << 1,
     3, // us delay
+    & d6,   //  TRIG
+    // & d7,   //  DEBUG
 };
 
 static void xi2c_load(uint16_t page, uint8_t offset, void* buff, int count)
@@ -213,24 +209,6 @@ static FlashIO flash_io = {
      *
      */
 
-void pin_test()
-{
-#if 1
-
-    i2c_init(& i2c);
-#if 0
-    delay_us(10000);
-    while (1) {
-
-        i2c_is_present(& i2c);
- 
-        delay_us(100000);
-
-    }
-#endif
-#endif
-}
-
 bool flash_init(MemoryPlug* m, 
     void (*text_fn)(const char*), 
     void (*send_fn)(const void* data, int length))
@@ -239,12 +217,10 @@ bool flash_init(MemoryPlug* m,
 #if defined(ALLOW_VERBOSE)
     debug_fn = text_fn;
 #endif
-    mem = m;
 
-    if (!mem)
-        return false;
+    i2c_init(& i2c);
 
-    if (mem->isPresent()) {
+    if (i2c_is_present(& i2c)) {
 #if defined(ALLOW_VERBOSE)
         debug("flash_init()\r\n");
 #endif
@@ -253,9 +229,6 @@ bool flash_init(MemoryPlug* m,
         flash_info.info.block_size = 256;
         flash_info.packet_size = sizeof(FlashRead::data);
     }
-
-    // TODO : remove me
-    pin_test();
 
     return true;
 }

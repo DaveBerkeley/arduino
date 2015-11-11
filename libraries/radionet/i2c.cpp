@@ -173,22 +173,24 @@ bool i2c_is_present(I2C* i2c)
      *
      */
 
-static uint8_t dev_select(I2C* i2c, uint16_t page)
+static bool x_start(I2C* i2c, uint16_t page)
 {
-    return i2c->addr + ((page > 255) ? 0x02 : 0x00);
+    const uint8_t sel = i2c->addr + ((page > 255) ? 0x02 : 0x00);
+    //  Use polling sequence until device returns ack.
+    int retry = 0;
+    while (true) {
+        if (i2c_start(i2c, sel))
+            return true;
+        if (retry++ == 100)
+            return false;
+        pin_pulse(i2c->debug);
+    }
 }
 
 void i2c_load(I2C* i2c, uint16_t page, uint8_t offset, void* buff, int count)
 {
-    //while (get_ms() < i2c->next_save)
-    //    ;
-
     // Address Write
-    while (!i2c_start(i2c, dev_select(i2c, page)))
-    {
-        // TODO : Implement timeout
-        pin_pulse(i2c->debug);
-    }
+    x_start(i2c, page);
     i2c_write(i2c, page);
     i2c_write(i2c, offset);
 
@@ -203,16 +205,8 @@ void i2c_load(I2C* i2c, uint16_t page, uint8_t offset, void* buff, int count)
 
 void i2c_save(I2C* i2c, uint16_t page, uint8_t offset, const void* buff, int count)
 {
-    // don't do back-to-back saves, last one must have had time to finish!
-    //while (millis() < i2c->next_save)
-    //    ;
-
     // Address Write
-    while (!i2c_start(i2c, dev_select(i2c, page)))
-    {
-        // TODO : Implement timeout
-        pin_pulse(i2c->debug);
-    }
+    x_start(i2c, page);
     i2c_write(i2c, page);
     i2c_write(i2c, offset);
 
@@ -221,8 +215,6 @@ void i2c_save(I2C* i2c, uint16_t page, uint8_t offset, const void* buff, int cou
         i2c_write(i2c, *b++);
     }
     i2c_stop(i2c);
-
-    //i2c->next_save = millis() + 10;
 }
 
     /*
