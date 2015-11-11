@@ -31,9 +31,6 @@
      *  from which it borrows.
      */
 
-extern "C" {
-extern unsigned long millis(void);
-}
 
     /*
      *  I2C pin manipulation primitives

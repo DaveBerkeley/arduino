@@ -50,12 +50,6 @@ void delay_us(uint16_t us)
     delayMicroseconds(us);
 }
 
-uint32_t get_ms()
-{
-    // TODO : make usable in bootloader
-    return millis();
-}
-
     /*
      *  Command Interface
      */

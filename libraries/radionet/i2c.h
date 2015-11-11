@@ -20,7 +20,6 @@
 #include "pinio.h"
 
 void delay_us(uint16_t us);
-uint32_t get_ms();
 
     /*
      *  I2C Interface
