@@ -165,7 +165,6 @@ static I2C i2c = {
 };
 
 static FlashIO io = {
-    0,  //  filled in by the library
     & i2c,
 };
 

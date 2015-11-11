@@ -164,11 +164,6 @@ bool flash_fast_poll()
     return fast_poll;
 }
 
-    /*
-     *
-     */
-
-static FlashInfo flash_info = { FLASH_INFO, };
 
     /*
      *
@@ -183,7 +178,6 @@ bool flash_init(FlashIO* io,
     debug_fn = text_fn;
 #endif
 
-    io->info = & flash_info.info;
     i2c_init(io->i2c);
 
     if (i2c_is_present(io->i2c)) {
@@ -191,9 +185,8 @@ bool flash_init(FlashIO* io,
         debug("flash_init()\r\n");
 #endif
         // How to find this out from the memory device?
-        flash_info.info.blocks = (128 * 1024L) / 256;
-        flash_info.info.block_size = 256;
-        flash_info.packet_size = sizeof(FlashRead::data);
+        io->info.blocks = (128 * 1024L) / 256;
+        io->info.block_size = 256;
     }
 
     return true;
@@ -267,8 +260,13 @@ bool flash_req_handler(FlashIO* io, Message* msg)
                 debug(buff);
             }
 #endif // ALLOW_VERBOSE
-            flash_info.req_id = fc->req_id;
-            send_flash_message(& flash_info, sizeof(flash_info));
+            FlashInfo fi;
+
+            memcpy(& fi.info, & io->info, sizeof(fi));
+            fi.cmd = FLASH_INFO;
+            fi.req_id = fc->req_id;
+            fi.packet_size = sizeof(FlashRead::data);
+            send_flash_message(& fi, sizeof(fi));
             break;
         }
         case FLASH_CRC_REQ : {

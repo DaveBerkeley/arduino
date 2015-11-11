@@ -70,8 +70,8 @@ typedef struct {
 }   _FlashInfo;
 
 typedef struct {
-    _FlashInfo* info;
     I2C* i2c;
+    _FlashInfo info;
 }   FlashIO;
 
 // Block Iterator to handle Flash page boundaries.
