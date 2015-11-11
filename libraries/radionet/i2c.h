@@ -17,31 +17,22 @@
  USA
 */
 
+#include "pinio.h"
+
 void delay_us(uint16_t us);
 uint32_t get_ms();
-
-    /*
-     *  I2C Implementation
-     */
-
-typedef struct {
-    volatile uint8_t* ddr;    // data direction register r/w (1==output)
-    volatile uint8_t* data;   // data register - r/w
-    volatile uint8_t* pin;    // pin register - read input state
-    uint8_t mask;
-}   Pin;
 
     /*
      *  I2C Interface
      */
 
 typedef struct {
-    Pin*    sda;
-    Pin*    scl;
-    uint8_t addr;
-    uint16_t scl_delay;
-    Pin*    trig;
-    Pin*    debug;
+    PinIo*      sda;
+    PinIo*      scl;
+    uint8_t     addr;
+    uint16_t    scl_delay;
+    PinIo*      trig;
+    PinIo*      debug;
 }   I2C;
 
 // Low level I2C io functions

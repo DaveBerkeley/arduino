@@ -150,17 +150,17 @@ static void debug(const char* text)
      *  I2C Interface.
      */
 
-static Pin d4 = { & DDRD, & PORTD, & PIND, 1<<4 };
-static Pin d6 = { & DDRD, & PORTD, & PIND, 1<<6 };
-//static Pin d7 = { & DDRD, & PORTD, & PIND, 1<<7 };
-static Pin a0 = { & DDRC, & PORTC, & PINC, 1<<0 };
+static PinIo d4 = { & DDRD, & PORTD, & PIND, 1<<4 };
+//static PinIo d6 = { & DDRD, & PORTD, & PIND, 1<<6 };
+//static PinIo d7 = { & DDRD, & PORTD, & PIND, 1<<7 };
+static PinIo a0 = { & DDRC, & PORTC, & PINC, 1<<0 };
 
 static I2C i2c = {
     & d4,   //  SDA
     & a0,   //  SCL
     0x50 << 1,
     3, // us delay
-    & d6,   //  TRIG
+    // & d6,   //  TRIG
     // & d7,   //  DEBUG
 };
 

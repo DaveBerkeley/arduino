@@ -31,41 +31,6 @@
      *  from which it borrows.
      */
 
-    /*
-     *  Pin IO functions.
-     */
-
-static inline void pin_change(volatile uint8_t* reg, uint8_t mask, bool state)
-{
-    if (state)
-        *reg |= mask;
-    else
-        *reg &= ~mask;
-}
-
-void pin_mode(const Pin* pin, bool output)
-{
-    pin_change(pin->ddr, pin->mask, output);
-}
-
-void pin_set(const Pin* pin, bool state)
-{
-    pin_change(pin->data, pin->mask, state);
-}
-
-bool pin_get(const Pin* pin)
-{
-    return (pin->mask & *(pin->pin)) ? true : false;
-}
-
-void pin_pulse(const Pin* pin)
-{
-    if (pin) {
-        pin_set(pin, false);
-        pin_set(pin, true);
-    }
-}
-
 extern "C" {
 extern unsigned long millis(void);
 }
