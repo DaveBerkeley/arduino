@@ -53,6 +53,7 @@ PROGRAM    = optiboot
 # ENV ?= arduinodev
 # OS ?= macosx
 # OS ?= windows
+# OS ?= linux
 
 # export symbols to recursive makes (for ISP)
 export
@@ -125,8 +126,10 @@ STK500-2 = $(STK500) -d$(MCU_TARGET) -ms -q -lCF -LCF -cUSB -I200kHz -s -wt
 #
 # End of build environment code.
 
+I2CDIR = ../../libraries/radionet
+I2C = $(I2CDIR)/i2c.o  $(I2CDIR)/pinio.o 
 
-OBJ        = $(PROGRAM).o
+OBJ        = $(PROGRAM).o $(I2C)
 OPTIMIZE = -Os -fno-split-wide-types -mrelax
 
 DEFS       = 
@@ -135,13 +138,13 @@ DEFS       =
 # platforms support EEPROM and large bootloaders need the eeprom functions that
 # are defined in libc, even though we explicity remove it with -nostdlib because
 # of the space-savings.
-LIBS       =  -lc
+LIBS       =  -lc $(I2C)
 
 CC         = $(GCCROOT)avr-gcc
 
 # Override is only needed by avr-lib build system.
 
-override CFLAGS        = -g -Wall $(OPTIMIZE) -mmcu=$(MCU_TARGET) -DF_CPU=$(AVR_FREQ) $(DEFS)
+override CFLAGS        = -g -Wall $(OPTIMIZE) -mmcu=$(MCU_TARGET) -DF_CPU=$(AVR_FREQ) $(DEFS) -I $(I2CDIR)
 override LDFLAGS       = $(LDSECTIONS) -Wl,--relax -nostartfiles -nostdlib
 #-Wl,--gc-sections
 

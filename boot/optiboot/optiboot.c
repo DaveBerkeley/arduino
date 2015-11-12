@@ -440,10 +440,15 @@ void appStart(uint8_t rstFlags) __attribute__ ((naked));
 #define appstart_vec (0)
 #endif // VIRTUAL_BOOT_PARTITION
 
+#include <stdbool.h>
+
+#include <i2c.h>
 
 /* main program starts here */
 int main(void) {
   uint8_t ch;
+
+  i2c_init(0);
 
   /*
    * Making these local and in registers prevents the need for initializing
