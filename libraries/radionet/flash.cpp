@@ -197,15 +197,15 @@ static void flash_block(const FlashIO* io, void* obj, uint32_t addr, uint16_t by
 {
     //  calculate block / offset etc.
     while (bytes) {
-        const uint16_t bsize = io->info.block_size;
-        const uint16_t block = addr / bsize;
+        const uint16_t bsize = io->info.page_size;
+        const uint16_t page = addr / bsize;
         const uint16_t offset = addr % bsize;
         const uint16_t size = min(bytes, bsize - offset);
 
-        if (block >= io->info.blocks)
+        if (page >= io->info.pages)
             return;
 
-        fn(io, obj, block, offset, size, data);
+        fn(io, obj, page, offset, size, data);
 
         data += size;
         bytes -= size;

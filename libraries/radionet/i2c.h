@@ -54,8 +54,8 @@ bool i2c_load(I2C* i2c, uint16_t page, uint8_t offset, void* buff, int count);
 bool i2c_save(I2C* i2c, uint16_t page, uint8_t offset, const void* buff, int count);
 
 typedef struct {
-    uint16_t    blocks;
-    uint16_t    block_size;
+    uint16_t    pages;
+    uint16_t    page_size;
 }   _FlashInfo;
 
 typedef struct {

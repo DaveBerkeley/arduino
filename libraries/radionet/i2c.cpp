@@ -206,8 +206,8 @@ static uint16_t probe(I2C* i2c, uint16_t lo, uint16_t hi)
 
 void i2c_probe(I2C* i2c, _FlashInfo* info)
 {
-    info->block_size = 256;
-    info->blocks = probe(i2c, 0, 1024 * (1024 / 256)) + 1;
+    info->page_size = 256;
+    info->pages = probe(i2c, 0, 1024 * (1024 / 256)) + 1;
 }
 
 // FIN
