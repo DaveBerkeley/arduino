@@ -196,14 +196,16 @@ bool i2c_save(I2C* i2c, uint16_t page, uint8_t offset, const void* buff, int cou
 static uint16_t probe(I2C* i2c, uint16_t lo, uint16_t hi)
 {
     // do binary search on existence of EEPROM
-    uint8_t c;
-    const uint16_t mid = (lo + hi) / 2;
-    if (mid == lo)
-        return mid;
-    if (i2c_load(i2c, mid, 0, & c, sizeof(c)))
-        return probe(i2c, mid, hi);
-    else
-        return probe(i2c, lo, mid);
+    while (true) {
+        uint8_t c;
+        uint16_t page = (lo + hi) / 2;
+        if (page == lo)
+            return page;
+        if (i2c_load(i2c, page, 0, & c, sizeof(c)))
+            lo = page;
+        else
+            hi = page;
+    }
 }
 
 void i2c_probe(I2C* i2c, _FlashInfo* info)
@@ -212,7 +214,8 @@ void i2c_probe(I2C* i2c, _FlashInfo* info)
     const int16_t was = i2c->retries;
     i2c->retries = 1;
     info->page_size = 256;
-    info->pages = probe(i2c, 0, (1024 * (1024 / 256)) - 1) + 1;
+    const uint16_t max_pages = 1024 * (1024 / 256); // 1MB
+    info->pages = probe(i2c, 0, max_pages - 1) + 1;
     // restore the retries count
     i2c->retries = was;
 }
