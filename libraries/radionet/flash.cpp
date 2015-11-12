@@ -175,13 +175,18 @@ bool flash_init(FlashIO* io,
     i2c_init(io->i2c);
 
     if (i2c_is_present(io->i2c)) {
-#if defined(ALLOW_VERBOSE)
-        debug("flash_init()\r\n");
-#endif
-        // How to find this out from the memory device?
-        //io->info.blocks = (128 * 1024L) / 256;
-        //io->info.block_size = 256;
+        // Probe memory device to find its size.
         i2c_probe(io->i2c, & io->info);
+#if defined(ALLOW_VERBOSE)
+        if (debug_fn) {
+            char buff[32];
+            snprintf(buff, sizeof(buff), 
+                    "flash_init(%d,%d)\r\n", 
+                    io->info.pages,
+                    io->info.page_size);
+            debug(buff);
+        }
+#endif
     }
 
     return true;

@@ -50,8 +50,8 @@ bool i2c_get(I2C* i2c)
 
 void i2c_scl(I2C* i2c, bool state)
 {
-    if (i2c->scl_delay)
-        delay_us(i2c->scl_delay);
+    if (i2c->delay)
+        i2c->delay();
     pin_set(i2c->scl, state);
 }
 
@@ -68,6 +68,8 @@ void i2c_init(I2C* i2c)
         pin_set(i2c->trig, true);
         pin_mode(i2c->trig, true);
     }
+
+    i2c->retries = 100;
 }
 
 bool i2c_is_present(I2C* i2c)
@@ -144,7 +146,7 @@ static bool x_start(I2C* i2c, uint16_t page)
     //  EEPROM will return NAK while write is in progress.
     //
     //  Use polling sequence until device returns ack.
-    for (int retry = 0; retry < 100; ++retry) {
+    for (int retry = 0; retry < i2c->retries; ++retry) {
         if (i2c_start(i2c, sel))
             return true;
     }
@@ -195,7 +197,7 @@ static uint16_t probe(I2C* i2c, uint16_t lo, uint16_t hi)
 {
     // do binary search on existence of EEPROM
     uint8_t c;
-    uint16_t mid = (lo + hi) / 2;
+    const uint16_t mid = (lo + hi) / 2;
     if (mid == lo)
         return mid;
     if (i2c_load(i2c, mid, 0, & c, sizeof(c)))
@@ -206,8 +208,13 @@ static uint16_t probe(I2C* i2c, uint16_t lo, uint16_t hi)
 
 void i2c_probe(I2C* i2c, _FlashInfo* info)
 {
+    // reduce retries as we are using NAK fails to detect EEPROM
+    const int16_t was = i2c->retries;
+    i2c->retries = 1;
     info->page_size = 256;
-    info->pages = probe(i2c, 0, 1024 * (1024 / 256)) + 1;
+    info->pages = probe(i2c, 0, (1024 * (1024 / 256)) - 1) + 1;
+    // restore the retries count
+    i2c->retries = was;
 }
 
 // FIN

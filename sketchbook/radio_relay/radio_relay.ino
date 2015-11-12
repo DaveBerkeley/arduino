@@ -151,15 +151,15 @@ static void debug(const char* text)
      */
 
 static PinIo d4 = { & DDRD, & PORTD, & PIND, 1<<4 };
-//static PinIo d6 = { & DDRD, & PORTD, & PIND, 1<<6 };
+static PinIo d6 = { & DDRD, & PORTD, & PIND, 1<<6 };
 static PinIo a0 = { & DDRC, & PORTC, & PINC, 1<<0 };
 
 static I2C i2c = {
     & d4,   //  SDA
     & a0,   //  SCL
     0x50 << 1,
-    3, // us delay
-    // & d6,   //  TRIG
+    0, // i2c_delay,
+    & d6,   //  TRIG
 };
 
 static FlashIO io = {

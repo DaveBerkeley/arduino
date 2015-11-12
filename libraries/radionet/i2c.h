@@ -29,8 +29,10 @@ typedef struct {
     PinIo*      sda;
     PinIo*      scl;
     uint8_t     addr;
-    uint16_t    scl_delay;
+    void (*delay)();
     PinIo*      trig;
+    //  Polled mode retries
+    int16_t     retries;
 }   I2C;
 
 // Low level I2C io functions
