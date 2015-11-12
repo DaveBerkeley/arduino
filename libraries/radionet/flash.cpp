@@ -179,11 +179,72 @@ bool flash_init(FlashIO* io,
         debug("flash_init()\r\n");
 #endif
         // How to find this out from the memory device?
-        io->info.blocks = (128 * 1024L) / 256;
-        io->info.block_size = 256;
+        //io->info.blocks = (128 * 1024L) / 256;
+        //io->info.block_size = 256;
+        i2c_probe(io->i2c, & io->info);
     }
 
     return true;
+}
+
+    /*
+     *  Block Iterator to handle Flash page boundaries.
+     */
+
+typedef void (*flash_iter)(const FlashIO* io, void* obj, uint16_t block, uint16_t offset, uint16_t bytes, uint8_t* data);
+
+static void flash_block(const FlashIO* io, void* obj, uint32_t addr, uint16_t bytes, uint8_t* data, flash_iter fn)
+{
+    //  calculate block / offset etc.
+    while (bytes) {
+        const uint16_t bsize = io->info.block_size;
+        const uint16_t block = addr / bsize;
+        const uint16_t offset = addr % bsize;
+        const uint16_t size = min(bytes, bsize - offset);
+
+        if (block >= io->info.blocks)
+            return;
+
+        fn(io, obj, block, offset, size, data);
+
+        data += size;
+        bytes -= size;
+        addr += size;
+    }
+} 
+
+    /*
+     *  Save data to Flash
+     */
+
+static void saver(const FlashIO* io, void* obj, uint16_t block, uint16_t offset, uint16_t bytes, uint8_t* data)
+{
+    uint16_t* xfered = (uint16_t*) obj;
+
+    i2c_save(io->i2c, block, offset, data, bytes);
+    *xfered += bytes;
+}
+
+void flash_save(const FlashIO* io, uint16_t* xfered, uint32_t addr, uint16_t bytes, uint8_t* data)
+{
+    flash_block(io, xfered, addr, bytes, data, saver);
+}
+
+    /*
+     *  Read data from Flash
+     */
+
+static void reader(const FlashIO* io, void* obj, uint16_t block, uint16_t offset, uint16_t bytes, uint8_t* data)
+{
+    uint16_t* xfered = (uint16_t*) obj;
+
+    i2c_load(io->i2c, block, offset, data, bytes);
+    *xfered += bytes;
+}
+
+void flash_read(const FlashIO* io, uint16_t* xfered, uint32_t addr, uint16_t bytes, uint8_t* data)
+{
+    flash_block(io, xfered, addr, bytes, data, reader);
 }
 
     /*

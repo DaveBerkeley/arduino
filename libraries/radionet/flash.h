@@ -23,6 +23,11 @@ bool flash_init(FlashIO* io,
         void (*debug_fn)(const char* text), 
         void (*send_fn)(const void* data, int length)=0);
 
+//  Data Transfer.
+
+void flash_save(const FlashIO* io, uint16_t* xfered, uint32_t addr, uint16_t bytes, uint8_t* data);
+void flash_read(const FlashIO* io, uint16_t* xfered, uint32_t addr, uint16_t bytes, uint8_t* data);
+
 class Message;
 
 bool flash_req_handler(FlashIO* io, Message* msg);

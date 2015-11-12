@@ -70,6 +70,17 @@ void i2c_init(I2C* i2c)
     }
 }
 
+bool i2c_is_present(I2C* i2c)
+{
+    const bool ok = i2c_start(i2c, i2c->addr);
+    i2c_stop(i2c);
+    return ok;
+}
+
+    /*
+     *  I2C Command primitives
+     */
+
 bool i2c_start(I2C* i2c, uint8_t addr)
 {
     pin_pulse(i2c->trig);
@@ -120,20 +131,16 @@ uint8_t i2c_read(I2C* i2c, bool last)
     return data;
 }
 
-bool i2c_is_present(I2C* i2c)
-{
-    const bool ok = i2c_start(i2c, i2c->addr);
-    i2c_stop(i2c);
-    return ok;
-}
-
     /*
      *
      */
 
 static bool x_start(I2C* i2c, uint16_t page)
 {
-    const uint8_t sel = i2c->addr + ((page > 255) ? 0x02 : 0x00);
+    page >>= 8;
+    page &= 0x07;
+    page <<= 1;
+    const uint8_t sel = i2c->addr + page;
     //  EEPROM will return NAK while write is in progress.
     //
     //  Use polling sequence until device returns ack.
@@ -144,10 +151,14 @@ static bool x_start(I2C* i2c, uint16_t page)
     return false;
 }
 
-void i2c_load(I2C* i2c, uint16_t page, uint8_t offset, void* buff, int count)
+    /*
+     *  EEPROM load / save code
+     */
+
+bool i2c_load(I2C* i2c, uint16_t page, uint8_t offset, void* buff, int count)
 {
     // Address Write
-    x_start(i2c, page);
+    const bool ok = x_start(i2c, page);
     i2c_write(i2c, page);
     i2c_write(i2c, offset);
 
@@ -158,12 +169,13 @@ void i2c_load(I2C* i2c, uint16_t page, uint8_t offset, void* buff, int count)
     while (--count >= 0) {
         *b++ = i2c_read(i2c, count == 0);
     }
+    return ok;
 }
 
-void i2c_save(I2C* i2c, uint16_t page, uint8_t offset, const void* buff, int count)
+bool i2c_save(I2C* i2c, uint16_t page, uint8_t offset, const void* buff, int count)
 {
     // Address Write
-    x_start(i2c, page);
+    const bool ok  = x_start(i2c, page);
     i2c_write(i2c, page);
     i2c_write(i2c, offset);
 
@@ -172,64 +184,30 @@ void i2c_save(I2C* i2c, uint16_t page, uint8_t offset, const void* buff, int cou
         i2c_write(i2c, *b++);
     }
     i2c_stop(i2c);
+    return ok;
 }
 
     /*
-     *  Block Iterator to handle Flash page boundaries.
+     *  Detect EEPROM
      */
 
-void flash_block(const FlashIO* io, void* obj, uint32_t addr, uint16_t bytes, uint8_t* data, flash_iter fn)
+static uint16_t probe(I2C* i2c, uint16_t lo, uint16_t hi)
 {
-    //  calculate block / offset etc.
-    while (bytes) {
-        const uint16_t bsize = io->info.block_size;
-        const uint16_t block = addr / bsize;
-        const uint16_t offset = addr % bsize;
-        const uint16_t size = min(bytes, bsize - offset);
-
-        if (block >= io->info.blocks)
-            return;
-
-        fn(io, obj, block, offset, size, data);
-
-        data += size;
-        bytes -= size;
-        addr += size;
-    }
-} 
-
-    /*
-     *  Save data to Flash
-     */
-
-static void saver(const FlashIO* io, void* obj, uint16_t block, uint16_t offset, uint16_t bytes, uint8_t* data)
-{
-    uint16_t* xfered = (uint16_t*) obj;
-
-    i2c_save(io->i2c, block, offset, data, bytes);
-    *xfered += bytes;
+    // do binary search on existence of EEPROM
+    uint8_t c;
+    uint16_t mid = (lo + hi) / 2;
+    if (mid == lo)
+        return mid;
+    if (i2c_load(i2c, mid, 0, & c, sizeof(c)))
+        return probe(i2c, mid, hi);
+    else
+        return probe(i2c, lo, mid);
 }
 
-void flash_save(const FlashIO* io, uint16_t* xfered, uint32_t addr, uint16_t bytes, uint8_t* data)
+void i2c_probe(I2C* i2c, _FlashInfo* info)
 {
-    flash_block(io, xfered, addr, bytes, data, saver);
-}
-
-    /*
-     *  Read data from Flash
-     */
-
-static void reader(const FlashIO* io, void* obj, uint16_t block, uint16_t offset, uint16_t bytes, uint8_t* data)
-{
-    uint16_t* xfered = (uint16_t*) obj;
-
-    i2c_load(io->i2c, block, offset, data, bytes);
-    *xfered += bytes;
-}
-
-void flash_read(const FlashIO* io, uint16_t* xfered, uint32_t addr, uint16_t bytes, uint8_t* data)
-{
-    flash_block(io, xfered, addr, bytes, data, reader);
+    info->block_size = 256;
+    info->blocks = probe(i2c, 0, 1024 * (1024 / 256)) + 1;
 }
 
 // FIN

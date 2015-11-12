@@ -50,8 +50,8 @@ bool i2c_is_present(I2C* i2c);
      *  Interface to Flash Memory.
      */
 
-void i2c_load(I2C* i2c, uint16_t page, uint8_t offset, void* buff, int count);
-void i2c_save(I2C* i2c, uint16_t page, uint8_t offset, const void* buff, int count);
+bool i2c_load(I2C* i2c, uint16_t page, uint8_t offset, void* buff, int count);
+bool i2c_save(I2C* i2c, uint16_t page, uint8_t offset, const void* buff, int count);
 
 typedef struct {
     uint16_t    blocks;
@@ -63,15 +63,6 @@ typedef struct {
     _FlashInfo info;
 }   FlashIO;
 
-// Block Iterator to handle Flash page boundaries.
-
-typedef void (*flash_iter)(const FlashIO* io, void* obj, uint16_t block, uint16_t offset, uint16_t bytes, uint8_t* data);
-
-void flash_block(const FlashIO* io, void* obj, uint32_t addr, uint16_t bytes, uint8_t* data, flash_iter fn);
-
-//  Data Transfer.
-
-void flash_save(const FlashIO* io, uint16_t* xfered, uint32_t addr, uint16_t bytes, uint8_t* data);
-void flash_read(const FlashIO* io, uint16_t* xfered, uint32_t addr, uint16_t bytes, uint8_t* data);
+void i2c_probe(I2C* i2c, _FlashInfo* info);
 
 // FIN
