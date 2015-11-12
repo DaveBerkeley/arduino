@@ -233,6 +233,9 @@
 #
 ########################################################################
 
+# to allow .c files to use c99 additions
+CFLAGS += -std=c99
+
 arduino_output =
 # When output is not suppressed and we're in the top-level makefile,
 # running for the first time (i.e., not after a restart after
