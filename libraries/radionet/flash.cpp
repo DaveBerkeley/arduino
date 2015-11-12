@@ -294,6 +294,10 @@ void send_flash_message(const void* data, int length)
 }
 
     /*
+     *  Handlers for individual Flash messages.
+     */
+
+    /*
      *
      */
 
@@ -319,6 +323,10 @@ static void flash_info_req(FlashIO* io, FlashInfoReq* fc)
     fi.packet_size = sizeof(FlashRead::data);
     send_flash_message(& fi, sizeof(fi));
 }
+
+    /*
+     *
+     */
 
 static void flash_slot_req(FlashIO* io, FlashSlotReq* fc)
 {
@@ -346,6 +354,10 @@ static void flash_slot_req(FlashIO* io, FlashSlotReq* fc)
     flash_read(io, offset, size, (uint8_t*) & info.entry);
     send_flash_message(& info, sizeof(info));
 }
+
+    /*
+     *
+     */
 
 static void flash_crc_req(FlashIO* io, FlashCrcReq* fc)
 {
@@ -380,6 +392,10 @@ static void flash_crc_req(FlashIO* io, FlashCrcReq* fc)
     send_flash_message(& info, sizeof(info));
 }
 
+    /*
+     *
+     */
+
 static void flash_read_req(FlashIO* io, FlashReadReq* fc)
 {
     FlashRead info;
@@ -404,6 +420,75 @@ static void flash_read_req(FlashIO* io, FlashReadReq* fc)
 #endif // ALLOW_VERBOSE
 
     send_flash_message(& info, sizeof(FlashReadReq) + info.bytes);
+}
+
+    /*
+     *
+     */
+
+static void flash_slot(FlashIO* io, FlashSlot* fc)
+{
+#if defined(ALLOW_VERBOSE)
+    if (debug_fn) {
+        char buff[32];
+        snprintf(buff, sizeof(buff), 
+                "flash_record(r=%d,%d)\r\n", 
+                (int) fc->req_id,
+                fc->slot);
+        debug(buff);
+    }
+#endif // ALLOW_VERBOSE
+    // Write Record
+    const uint16_t size = sizeof(fc->entry);
+    const uint32_t offset = fc->slot * size;
+    FlashWritten info;
+
+    info.cmd = FLASH_WRITTEN;
+    info.req_id = fc->req_id;
+    info.addr = offset;
+    info.bytes = 0;
+
+    // Do the write
+    if (fc->slot <= MAX_SLOTS) {
+        info.bytes = flash_save(io, offset, size, (uint8_t*) & fc->entry);
+        // CRC the EEPROM that we've just written
+        info.crc = get_crc(io, offset, size);            
+    }
+    send_flash_message(& info, sizeof(info));
+}
+
+    /*
+     *
+     */
+
+static void flash_write(FlashIO* io, FlashWrite* fc)
+{
+    FlashWritten info;
+
+    info.cmd = FLASH_WRITTEN;
+    info.req_id = fc->req_id;
+    info.addr = fc->addr;
+    info.bytes = 0;
+
+    // Do the write
+    info.bytes = flash_save(io, fc->addr, fc->bytes, fc->data);
+
+#if defined(ALLOW_VERBOSE)
+    if (debug_fn) {
+        char buff[24];
+        snprintf(buff, sizeof(buff), 
+                "flash_write(r=%d,%ld,%d)\r\n", 
+                (int) info.req_id,
+                info.addr, 
+                info.bytes);
+        debug(buff);
+    }
+#endif // ALLOW_VERBOSE
+
+    // CRC the EEPROM that we've just written
+    info.crc = get_crc(io, fc->addr, fc->bytes);            
+
+    send_flash_message(& info, sizeof(info));
 }
 
     /*
@@ -439,33 +524,7 @@ bool flash_req_handler(FlashIO* io, Message* msg)
             break;
         }
         case FLASH_WRITE : {
-            FlashWrite* fc = (FlashWrite*) payload;
-            FlashWritten info;
-
-            info.cmd = FLASH_WRITTEN;
-            info.req_id = fc->req_id;
-            info.addr = fc->addr;
-            info.bytes = 0;
-
-            // Do the write
-            info.bytes = flash_save(io, fc->addr, fc->bytes, fc->data);
-
-#if defined(ALLOW_VERBOSE)
-            if (debug_fn) {
-                char buff[24];
-                snprintf(buff, sizeof(buff), 
-                        "flash_write(r=%d,%ld,%d)\r\n", 
-                        (int) info.req_id,
-                        info.addr, 
-                        info.bytes);
-                debug(buff);
-            }
-#endif // ALLOW_VERBOSE
-
-            // CRC the EEPROM that we've just written
-            info.crc = get_crc(io, fc->addr, fc->bytes);            
-
-            send_flash_message(& info, sizeof(info));
+            flash_write(io, (FlashWrite*) payload);
             break;
         }
         case FLASH_READ_REQ : {
@@ -493,34 +552,7 @@ bool flash_req_handler(FlashIO* io, Message* msg)
         }
 
         case FLASH_SLOT : {
-            FlashSlot* fc = (FlashSlot*) payload;
-#if defined(ALLOW_VERBOSE)
-            if (debug_fn) {
-                char buff[32];
-                snprintf(buff, sizeof(buff), 
-                        "flash_record(r=%d,%d)\r\n", 
-                        (int) fc->req_id,
-                        fc->slot);
-                debug(buff);
-            }
-#endif // ALLOW_VERBOSE
-            // Write Record
-            const uint16_t size = sizeof(fc->entry);
-            const uint32_t offset = fc->slot * size;
-            FlashWritten info;
-
-            info.cmd = FLASH_WRITTEN;
-            info.req_id = fc->req_id;
-            info.addr = offset;
-            info.bytes = 0;
-
-            // Do the write
-            if (fc->slot <= MAX_SLOTS) {
-                info.bytes = flash_save(io, offset, size, (uint8_t*) & fc->entry);
-                // CRC the EEPROM that we've just written
-                info.crc = get_crc(io, offset, size);            
-            }
-            send_flash_message(& info, sizeof(info));
+            flash_slot(io, (FlashSlot*) payload);
             break;
         }
 
