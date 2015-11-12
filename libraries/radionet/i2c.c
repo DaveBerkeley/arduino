@@ -81,8 +81,10 @@ static void i2c_stop(I2C* i2c)
 
 static bool i2c_write(I2C* i2c, uint8_t data)
 {
+    uint8_t mask;
+
     i2c_scl(i2c, false);
-    for (uint8_t mask = 0x80; mask; mask >>= 1) {
+    for (mask = 0x80; mask; mask >>= 1) {
         i2c_sda(i2c, data & mask);
         i2c_scl(i2c, true);
         i2c_scl(i2c, false);
@@ -106,7 +108,9 @@ static bool i2c_start(I2C* i2c, uint8_t addr)
 static uint8_t i2c_read(I2C* i2c, bool last)
 {
     uint8_t data = 0;
-    for (uint8_t mask = 0x80; mask; mask >>= 1) {
+    uint8_t mask;
+
+    for (mask = 0x80; mask; mask >>= 1) {
         i2c_scl(i2c, true);
         if (i2c_get(i2c))
             data |= mask;
@@ -147,7 +151,8 @@ static bool x_start(I2C* i2c, uint16_t page)
     page <<= 1;
     const uint8_t sel = i2c->addr + page;
 
-    for (int retry = 0; retry < i2c->retries; ++retry) {
+    int retry;
+    for (retry = 0; retry < i2c->retries; ++retry) {
         if (i2c_start(i2c, sel))
             return true;
     }

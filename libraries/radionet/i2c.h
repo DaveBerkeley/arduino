@@ -56,8 +56,8 @@ extern "C" {
 void i2c_init(I2C* i2c);
 bool i2c_is_present(I2C* i2c);
 
-bool i2c_load(I2C* i2c, uint16_t page, uint8_t offset, void* buff, int count);
-bool i2c_save(I2C* i2c, uint16_t page, uint8_t offset, const void* buff, int count);
+bool i2c_load(I2C* i2c, uint16_t page, uint8_t offset, void* buf, int count);
+bool i2c_save(I2C* i2c, uint16_t page, uint8_t offset, const void* buf, int count);
 
 // Detect the size of EEPROM
 void i2c_probe(FlashIO* io);
