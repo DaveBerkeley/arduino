@@ -57,6 +57,6 @@ typedef struct {
 }   FlashIO;
 
 // Detect the size of EEPROM
-void i2c_probe(I2C* i2c, _FlashInfo* info);
+void i2c_probe(FlashIO* io);
 
 // FIN

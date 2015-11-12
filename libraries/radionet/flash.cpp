@@ -51,8 +51,8 @@ static void debug(const char* text)
 enum FLASH_CMD {
     FLASH_INFO_REQ = 1,
     FLASH_INFO = 2,
-    FLASH_RECORD_REQ = 3,
-    FLASH_RECORD = 4,
+    FLASH_SLOT_REQ = 3,
+    FLASH_SLOT = 4,
     FLASH_WRITE = 5,
     FLASH_WRITTEN = 6,
     FLASH_CRC_REQ = 7,
@@ -71,7 +71,8 @@ typedef struct {
 typedef struct {
     uint8_t     cmd;
     uint8_t     req_id;
-    _FlashInfo  info;
+    uint16_t    pages;
+    uint16_t    page_size;
     uint16_t    packet_size;
 }   FlashInfo;
 
@@ -123,21 +124,21 @@ typedef struct {
     uint8_t     cmd;
     uint8_t     req_id;
     uint8_t     slot;
-}   FlashRecordReq;
+}   FlashSlotReq;
 
 typedef struct {
     uint8_t     name[8];
     uint32_t    addr;
     uint16_t    bytes;
     uint16_t    crc;
-}   _FlashRecord;
+}   _FlashSlot;
 
 typedef struct {
     uint8_t     cmd;
     uint8_t     req_id;
     uint8_t     slot;
-    _FlashRecord record;
-}   FlashRecord;
+    _FlashSlot entry;
+}   FlashSlot;
 
 #define MAX_SLOTS 8
 
@@ -170,7 +171,7 @@ bool flash_init(FlashIO* io,
 
     if (i2c_is_present(io->i2c)) {
         // Probe memory device to find its size.
-        i2c_probe(io->i2c, & io->info);
+        i2c_probe(io);
 #if defined(ALLOW_VERBOSE)
         if (debug_fn) {
             char buff[32];
@@ -293,6 +294,119 @@ void send_flash_message(const void* data, int length)
 }
 
     /*
+     *
+     */
+
+static void flash_info_req(FlashIO* io, FlashInfoReq* fc)
+{
+
+#if defined(ALLOW_VERBOSE)
+    if (debug_fn) {
+        char buff[32];
+        snprintf(buff, sizeof(buff), 
+                "flash_info_req(r=%d)\r\n", 
+                (int) fc->req_id);
+        debug(buff);
+    }
+#endif // ALLOW_VERBOSE
+
+    FlashInfo fi;
+
+    fi.pages = io->info.pages;
+    fi.page_size = io->info.page_size;
+    fi.cmd = FLASH_INFO;
+    fi.req_id = fc->req_id;
+    fi.packet_size = sizeof(FlashRead::data);
+    send_flash_message(& fi, sizeof(fi));
+}
+
+static void flash_slot_req(FlashIO* io, FlashSlotReq* fc)
+{
+
+#if defined(ALLOW_VERBOSE)
+    if (debug_fn) {
+        char buff[32];
+        snprintf(buff, sizeof(buff), 
+                "flash_record_req(r=%d,%d)\r\n", 
+                (int) fc->req_id,
+                fc->slot);
+        debug(buff);
+    }
+#endif // ALLOW_VERBOSE
+
+    FlashSlot info;
+
+    info.cmd = FLASH_SLOT;
+    info.req_id = fc->req_id;
+    info.slot = fc->slot;
+
+    const uint16_t size = sizeof(info.entry);
+    const uint32_t offset = fc->slot * size;
+    // Read Record
+    flash_read(io, offset, size, (uint8_t*) & info.entry);
+    send_flash_message(& info, sizeof(info));
+}
+
+static void flash_crc_req(FlashIO* io, FlashCrcReq* fc)
+{
+    FlashCrc info;
+
+    info.cmd = FLASH_CRC;
+    info.req_id = fc->req_id;
+    info.addr = fc->addr;
+    info.bytes = fc->bytes;
+
+#if defined(ALLOW_VERBOSE)
+    if (debug_fn) {
+        char buff[32];
+        snprintf(buff, sizeof(buff), 
+                "flash_crc(r=%d,%ld,%d,", 
+                (int) fc->req_id,
+                info.addr, info.bytes);
+        debug(buff);
+    }
+#endif // ALLOW_VERBOSE
+
+    info.crc = get_crc(io, fc->addr, fc->bytes);
+
+#if defined(ALLOW_VERBOSE)
+    if (debug_fn) {
+        char buff[32];
+        snprintf(buff, sizeof(buff), "%X)\r\n", info.crc);
+        debug(buff);
+    }
+#endif // ALLOW_VERBOSE
+
+    send_flash_message(& info, sizeof(info));
+}
+
+static void flash_read_req(FlashIO* io, FlashReadReq* fc)
+{
+    FlashRead info;
+
+    // FLASH READ
+    info.cmd = FLASH_READ;
+    info.req_id = fc->req_id;
+    info.addr = fc->addr;
+
+    info.bytes = flash_read(io, fc->addr, min(fc->bytes, sizeof(info.data)), info.data);
+
+#if defined(ALLOW_VERBOSE)
+    if (debug_fn) {
+        char buff[32];
+        snprintf(buff, sizeof(buff), 
+                "flash_read_req(r=%d,%ld,%d)\r\n",
+                (int) info.req_id,
+                info.addr,
+                info.bytes);
+        debug(buff);
+    }
+#endif // ALLOW_VERBOSE
+
+    send_flash_message(& info, sizeof(FlashReadReq) + info.bytes);
+}
+
+    /*
      *  Flash Message handler.
      */
 
@@ -308,56 +422,11 @@ bool flash_req_handler(FlashIO* io, Message* msg)
 
     switch (cmd) {
         case FLASH_INFO_REQ   : {
-            FlashInfoReq* fc = (FlashInfoReq*) payload;
-#if defined(ALLOW_VERBOSE)
-            if (debug_fn) {
-                char buff[32];
-                snprintf(buff, sizeof(buff), 
-                        "flash_info_req(r=%d)\r\n", 
-                        (int) fc->req_id);
-                debug(buff);
-            }
-#endif // ALLOW_VERBOSE
-            FlashInfo fi;
-
-            memcpy(& fi.info, & io->info, sizeof(fi));
-            fi.cmd = FLASH_INFO;
-            fi.req_id = fc->req_id;
-            fi.packet_size = sizeof(FlashRead::data);
-            send_flash_message(& fi, sizeof(fi));
+            flash_info_req(io, (FlashInfoReq*) payload);
             break;
         }
         case FLASH_CRC_REQ : {
-            FlashCrcReq* fc = (FlashCrcReq*) payload;
-            FlashCrc info;
-
-            info.cmd = FLASH_CRC;
-            info.req_id = fc->req_id;
-            info.addr = fc->addr;
-            info.bytes = fc->bytes;
-
-#if defined(ALLOW_VERBOSE)
-            if (debug_fn) {
-                char buff[32];
-                snprintf(buff, sizeof(buff), 
-                        "flash_crc(r=%d,%ld,%d,", 
-                        (int) fc->req_id,
-                        info.addr, info.bytes);
-                debug(buff);
-            }
-#endif // ALLOW_VERBOSE
-
-            info.crc = get_crc(io, fc->addr, fc->bytes);
-
-#if defined(ALLOW_VERBOSE)
-            if (debug_fn) {
-                char buff[32];
-                snprintf(buff, sizeof(buff), "%X)\r\n", info.crc);
-                debug(buff);
-            }
-#endif // ALLOW_VERBOSE
-
-            send_flash_message(& info, sizeof(info));
+            flash_crc_req(io, (FlashCrcReq*) payload);
             break;
         }
         case FLASH_REBOOT   : {
@@ -400,30 +469,7 @@ bool flash_req_handler(FlashIO* io, Message* msg)
             break;
         }
         case FLASH_READ_REQ : {
-            FlashReadReq* fc = (FlashReadReq*) payload;
-            FlashRead info;
-
-            // FLASH READ
-            info.cmd = FLASH_READ;
-            info.req_id = fc->req_id;
-            info.addr = fc->addr;
-            info.bytes = 0;
-
-            info.bytes  = flash_read(io, fc->addr, min(fc->bytes, sizeof(info.data)), info.data);
- 
-#if defined(ALLOW_VERBOSE)
-            if (debug_fn) {
-                char buff[32];
-                snprintf(buff, sizeof(buff), 
-                        "flash_read_req(r=%d,%ld,%d)\r\n",
-                        (int) info.req_id,
-                        info.addr,
-                        info.bytes);
-                debug(buff);
-            }
-#endif // ALLOW_VERBOSE
-
-            send_flash_message(& info, sizeof(FlashReadReq) + info.bytes);
+            flash_read_req(io, (FlashReadReq*) payload);
             break;
         }
         case FLASH_SET_FAST_POLL : {
@@ -441,35 +487,13 @@ bool flash_req_handler(FlashIO* io, Message* msg)
 #endif // ALLOW_VERBOSE
             break;
         }
-        case FLASH_RECORD_REQ : {
-            FlashRecordReq* fc = (FlashRecordReq*) payload;
-
-#if defined(ALLOW_VERBOSE)
-            if (debug_fn) {
-                char buff[32];
-                snprintf(buff, sizeof(buff), 
-                        "flash_record_req(r=%d,%d)\r\n", 
-                        (int) fc->req_id,
-                        fc->slot);
-                debug(buff);
-            }
-#endif // ALLOW_VERBOSE
-
-            FlashRecord info;
-
-            info.cmd = FLASH_RECORD;
-            info.req_id = fc->req_id;
-            info.slot = fc->slot;
-
-            const uint16_t size = sizeof(info.record);
-            const uint32_t offset = fc->slot * size;
-            // Read Record
-            flash_read(io, offset, size, (uint8_t*) & info.record);
-            send_flash_message(& info, sizeof(info));
-            break;
+        case FLASH_SLOT_REQ : {
+             flash_slot_req(io, (FlashSlotReq*) payload);
+             break;
         }
-        case FLASH_RECORD : {
-            FlashRecord* fc = (FlashRecord*) payload;
+
+        case FLASH_SLOT : {
+            FlashSlot* fc = (FlashSlot*) payload;
 #if defined(ALLOW_VERBOSE)
             if (debug_fn) {
                 char buff[32];
@@ -481,7 +505,7 @@ bool flash_req_handler(FlashIO* io, Message* msg)
             }
 #endif // ALLOW_VERBOSE
             // Write Record
-            const uint16_t size = sizeof(fc->record);
+            const uint16_t size = sizeof(fc->entry);
             const uint32_t offset = fc->slot * size;
             FlashWritten info;
 
@@ -492,7 +516,7 @@ bool flash_req_handler(FlashIO* io, Message* msg)
 
             // Do the write
             if (fc->slot <= MAX_SLOTS) {
-                info.bytes = flash_save(io, offset, size, (uint8_t*) & fc->record);
+                info.bytes = flash_save(io, offset, size, (uint8_t*) & fc->entry);
                 // CRC the EEPROM that we've just written
                 info.crc = get_crc(io, offset, size);            
             }
@@ -506,6 +530,8 @@ bool flash_req_handler(FlashIO* io, Message* msg)
         case FLASH_WRITTEN :
         case FLASH_INFO :
         default :   {
+            // Not implemented or unrecognised.
+            // Silently ignore
 #if defined(ALLOW_VERBOSE)
             if (debug_fn) {
                 char buff[32];
@@ -513,8 +539,6 @@ bool flash_req_handler(FlashIO* io, Message* msg)
                 debug(buff);
             }
 #endif // ALLOW_VERBOSE
-            // Not implemented or unrecognised
-            return false;
         }
     }
 

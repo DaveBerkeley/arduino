@@ -208,16 +208,16 @@ static uint16_t probe(I2C* i2c, uint16_t lo, uint16_t hi)
     }
 }
 
-void i2c_probe(I2C* i2c, _FlashInfo* info)
+void i2c_probe(FlashIO* io)
 {
     // reduce retries as we are using NAK fails to detect EEPROM
-    const int16_t was = i2c->retries;
-    i2c->retries = 1;
-    info->page_size = 256;
+    const int16_t was = io->i2c->retries;
+    io->i2c->retries = 1;
+    io->info.page_size = 256;
     const uint16_t max_pages = 1024 * (1024 / 256); // 1MB
-    info->pages = probe(i2c, 0, max_pages - 1) + 1;
+    io->info.pages = probe(io->i2c, 0, max_pages - 1) + 1;
     // restore the retries count
-    i2c->retries = was;
+    io->i2c->retries = was;
 }
 
 // FIN
