@@ -221,13 +221,15 @@ static void saver(const FlashIO* io, void* obj, uint16_t block, uint16_t offset,
 {
     uint16_t* xfered = (uint16_t*) obj;
 
-    i2c_save(io->i2c, block, offset, data, bytes);
-    *xfered += bytes;
+    if (i2c_save(io->i2c, block, offset, data, bytes))
+        *xfered += bytes;
 }
 
-void flash_save(const FlashIO* io, uint16_t* xfered, uint32_t addr, uint16_t bytes, uint8_t* data)
+uint16_t flash_save(const FlashIO* io, uint32_t addr, uint16_t bytes, uint8_t* data)
 {
-    flash_block(io, xfered, addr, bytes, data, saver);
+    uint16_t xfered = 0;
+    flash_block(io, & xfered, addr, bytes, data, saver);
+    return xfered;
 }
 
     /*
@@ -238,13 +240,15 @@ static void reader(const FlashIO* io, void* obj, uint16_t block, uint16_t offset
 {
     uint16_t* xfered = (uint16_t*) obj;
 
-    i2c_load(io->i2c, block, offset, data, bytes);
-    *xfered += bytes;
+    if (i2c_load(io->i2c, block, offset, data, bytes))
+        *xfered += bytes;
 }
 
-void flash_read(const FlashIO* io, uint16_t* xfered, uint32_t addr, uint16_t bytes, uint8_t* data)
+uint16_t flash_read(const FlashIO* io, uint32_t addr, uint16_t bytes, uint8_t* data)
 {
-    flash_block(io, xfered, addr, bytes, data, reader);
+    uint16_t xfered = 0;
+    flash_block(io, & xfered, addr, bytes, data, reader);
+    return xfered;
 }
 
     /*
@@ -376,7 +380,7 @@ bool flash_req_handler(FlashIO* io, Message* msg)
             info.bytes = 0;
 
             // Do the write
-            flash_save(io, & info.bytes, fc->addr, fc->bytes, fc->data);
+            info.bytes = flash_save(io, fc->addr, fc->bytes, fc->data);
 
 #if defined(ALLOW_VERBOSE)
             if (debug_fn) {
@@ -406,8 +410,8 @@ bool flash_req_handler(FlashIO* io, Message* msg)
             info.addr = fc->addr;
             info.bytes = 0;
 
-            flash_read(io, & info.bytes, fc->addr, min(fc->bytes, sizeof(info.data)), info.data);
-    
+            info.bytes  = flash_read(io, fc->addr, min(fc->bytes, sizeof(info.data)), info.data);
+ 
 #if defined(ALLOW_VERBOSE)
             if (debug_fn) {
                 char buff[32];
@@ -460,9 +464,8 @@ bool flash_req_handler(FlashIO* io, Message* msg)
 
             const uint16_t size = sizeof(info.record);
             const uint32_t offset = fc->slot * size;
-            uint16_t xferred = 0;
             // Read Record
-            flash_read(io, & xferred, offset, size, (uint8_t*) & info.record);
+            flash_read(io, offset, size, (uint8_t*) & info.record);
             send_flash_message(& info, sizeof(info));
             break;
         }
@@ -490,7 +493,7 @@ bool flash_req_handler(FlashIO* io, Message* msg)
 
             // Do the write
             if (fc->slot <= MAX_SLOTS) {
-                flash_save(io, & info.bytes, offset, size, (uint8_t*) & fc->record);
+                info.bytes = flash_save(io, offset, size, (uint8_t*) & fc->record);
                 // CRC the EEPROM that we've just written
                 info.crc = get_crc(io, offset, size);            
             }
