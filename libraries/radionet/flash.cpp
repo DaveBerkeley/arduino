@@ -44,12 +44,6 @@ static void debug(const char* text)
 }
 #endif // ALLOW_VERBOSE
 
-void delay_us(uint16_t us)
-{
-    // TODO : make usable in bootloader
-    delayMicroseconds(us);
-}
-
     /*
      *  Command Interface
      */

@@ -28,6 +28,10 @@ typedef struct {
     uint8_t mask;
 }   PinIo;
 
+#define PinIoD(bit) { & DDRD, & PORTD, & PIND, 1<<(bit) }
+#define PinIoC(bit) { & DDRC, & PORTC, & PINC, 1<<(bit) }
+#define PinIoB(bit) { & DDRB, & PORTB, & PINB, 1<<(bit) }
+
 static inline void pin_change(volatile uint8_t* reg, uint8_t mask, bool state)
 {
     if (state)
@@ -39,6 +43,5 @@ static inline void pin_change(volatile uint8_t* reg, uint8_t mask, bool state)
 void pin_mode(const PinIo* pin, bool output);
 void pin_set(const PinIo* pin, bool state);
 bool pin_get(const PinIo* pin);
-void pin_pulse(const PinIo* pin);
 
 // FIN

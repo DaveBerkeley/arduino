@@ -19,33 +19,24 @@
 
 #include "pinio.h"
 
-void delay_us(uint16_t us);
-
     /*
      *  I2C Interface
      */
 
 typedef struct {
-    PinIo*      sda;
-    PinIo*      scl;
-    uint8_t     addr;
-    void (*delay)();
-    PinIo*      trig;
-    //  Polled mode retries
-    int16_t     retries;
+    PinIo*      sda;        //  SDA pin
+    PinIo*      scl;        //  SCL pin
+    uint8_t     addr;       //  device address
+    void (*delay)();        //  optional scl delay fn
+    void (*trig)();         //  optional START debug fn
+
+    //  Used internally
+    int16_t     retries;    //  Polled mode retries
 }   I2C;
 
-// Low level I2C io functions
-void i2c_sda(I2C* i2c, bool data);
-bool i2c_get(I2C* i2c);
-void i2c_scl(I2C* i2c, bool state);
 
 // High level I2C functions
 void i2c_init(I2C* i2c);
-bool i2c_start(I2C* i2c, uint8_t addr);
-void i2c_stop(I2C* i2c);
-bool i2c_write(I2C* i2c, uint8_t data);
-uint8_t i2c_read(I2C* i2c, bool last);
 bool i2c_is_present(I2C* i2c);
 
     /*
@@ -65,6 +56,7 @@ typedef struct {
     _FlashInfo info;
 }   FlashIO;
 
+// Detect the size of EEPROM
 void i2c_probe(I2C* i2c, _FlashInfo* info);
 
 // FIN

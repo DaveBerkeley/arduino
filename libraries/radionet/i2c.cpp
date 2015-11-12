@@ -36,19 +36,19 @@
      *  I2C pin manipulation primitives
      */
 
-void i2c_sda(I2C* i2c, bool data)
+static void i2c_sda(I2C* i2c, bool data)
 {
     // pull low, float hi
     pin_mode(i2c->sda, !data);
     pin_set(i2c->sda, data);
 }
 
-bool i2c_get(I2C* i2c)
+static bool i2c_get(I2C* i2c)
 {
     return pin_get(i2c->sda);
 }
 
-void i2c_scl(I2C* i2c, bool state)
+static void i2c_scl(I2C* i2c, bool state)
 {
     if (i2c->delay)
         i2c->delay();
@@ -64,42 +64,21 @@ void i2c_init(I2C* i2c)
     i2c_sda(i2c, true);
     pin_mode(i2c->scl, true);
     i2c_scl(i2c, true);
-    if (i2c->trig) {
-        pin_set(i2c->trig, true);
-        pin_mode(i2c->trig, true);
-    }
-
     i2c->retries = 100;
-}
-
-bool i2c_is_present(I2C* i2c)
-{
-    const bool ok = i2c_start(i2c, i2c->addr);
-    i2c_stop(i2c);
-    return ok;
 }
 
     /*
      *  I2C Command primitives
      */
 
-bool i2c_start(I2C* i2c, uint8_t addr)
-{
-    pin_pulse(i2c->trig);
-    if (i2c->trig) delay_us(2);
-    i2c_scl(i2c, true);
-    i2c_sda(i2c, false);
-    return i2c_write(i2c, addr);
-}
-
-void i2c_stop(I2C* i2c)
+static void i2c_stop(I2C* i2c)
 {
     i2c_sda(i2c, false);
     i2c_scl(i2c, true);
     i2c_sda(i2c, true);
 }
 
-bool i2c_write(I2C* i2c, uint8_t data)
+static bool i2c_write(I2C* i2c, uint8_t data)
 {
     i2c_scl(i2c, false);
     for (uint8_t mask = 0x80; mask; mask >>= 1) {
@@ -114,7 +93,16 @@ bool i2c_write(I2C* i2c, uint8_t data)
     return ack;
 }
 
-uint8_t i2c_read(I2C* i2c, bool last)
+static bool i2c_start(I2C* i2c, uint8_t addr)
+{
+    if (i2c->trig)
+        i2c->trig();
+    i2c_scl(i2c, true);
+    i2c_sda(i2c, false);
+    return i2c_write(i2c, addr);
+}
+
+static uint8_t i2c_read(I2C* i2c, bool last)
 {
     uint8_t data = 0;
     for (uint8_t mask = 0x80; mask; mask >>= 1) {
@@ -134,7 +122,21 @@ uint8_t i2c_read(I2C* i2c, bool last)
 }
 
     /*
+     *  Does the device respond to its address with an ACK?
+     */
+
+bool i2c_is_present(I2C* i2c)
+{
+    const bool ok = i2c_start(i2c, i2c->addr);
+    i2c_stop(i2c);
+    return ok;
+}
+
+    /*
+     *  Repeat START,device_addr sequence until
+     *  an ACK is returned.
      *
+     *  EEPROM will return NAK while write is in progress.
      */
 
 static bool x_start(I2C* i2c, uint16_t page)
@@ -143,9 +145,7 @@ static bool x_start(I2C* i2c, uint16_t page)
     page &= 0x07;
     page <<= 1;
     const uint8_t sel = i2c->addr + page;
-    //  EEPROM will return NAK while write is in progress.
-    //
-    //  Use polling sequence until device returns ack.
+
     for (int retry = 0; retry < i2c->retries; ++retry) {
         if (i2c_start(i2c, sel))
             return true;

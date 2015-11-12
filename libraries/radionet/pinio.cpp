@@ -40,12 +40,4 @@ bool pin_get(const PinIo* pin)
     return (pin->mask & *(pin->pin)) ? true : false;
 }
 
-void pin_pulse(const PinIo* pin)
-{
-    if (pin) {
-        pin_set(pin, false);
-        pin_set(pin, true);
-    }
-}
-
 //  FIN
