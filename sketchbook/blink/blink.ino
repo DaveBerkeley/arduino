@@ -13,5 +13,5 @@ void loop()
   
   digitalWrite(LED, on ? LOW : HIGH);
   on = !on;
-  delay(1000);
+  delay(200);
 }
