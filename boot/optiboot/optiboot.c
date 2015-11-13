@@ -239,7 +239,6 @@
 unsigned const int __attribute__((section(".version"))) 
 optiboot_version = 256*(OPTIBOOT_MAJVER + OPTIBOOT_CUSTOMVER) + OPTIBOOT_MINVER;
 
-
 #include <inttypes.h>
 #include <avr/io.h>
 #include <avr/pgmspace.h>
@@ -443,12 +442,67 @@ void appStart(uint8_t rstFlags) __attribute__ ((naked));
 #include <stdbool.h>
 
 #include <i2c.h>
+#include <pinio.h>
+
+//static PinIo d4 = PinIoD(4);
+//static PinIo a0 = PinIoC(0);
+
+//static I2C i2c = {
+//    & d4,   //  SDA
+//    & a0,   //  SCL
+//    0x50 << 1,
+//};
+
+#define MASK (1 << 4)
+
+void initbang()
+{
+  PORTD |= MASK;
+  DDRD |= MASK;
+  {
+      uint8_t i;
+      for (i = 0; i < 40; ++i) {
+          PORTD |= MASK;
+      }
+  }
+}
+
+void bitbang(uint8_t data) {
+    PORTD &= ~MASK;
+    PORTD &= ~MASK;
+    uint8_t mask = 0x01;
+    while (mask) {
+        if (data & mask) {
+            PORTD |= MASK;
+        } else {
+            PORTD &= ~MASK;
+        }
+        mask <<= 1;
+    }
+    for (mask = 0; mask < 3; ++mask) {
+        PORTD |= MASK;
+    }
+}
+
 
 /* main program starts here */
 int main(void) {
   uint8_t ch;
 
-  i2c_init(0);
+#if 0
+  uint8_t m = 1 << 4;
+  DDRD |= m;
+  PORTD &= ~m;
+
+  i2c_init(& i2c);
+  PORTD |= m;
+
+  while (0) {
+  PORTD &= ~m;
+      i2c_is_present(& i2c);
+  PORTD |= m;
+  }
+#endif
 
   /*
    * Making these local and in registers prevents the need for initializing
@@ -526,10 +580,16 @@ int main(void) {
   flash_led(LED_START_FLASHES * 2);
 #endif
 
+  initbang();
+  //uint8_t loops = 0;
+  //bitbang(0x00);
+
   /* Forever loop: exits by causing WDT reset */
   for (;;) {
+    //bitbang(loops++);
     /* get character from UART */
     ch = getch();
+    //bitbang(loops++);
 
     if(ch == STK_GET_PARAMETER) {
       unsigned char which = getch();
@@ -651,6 +711,8 @@ int main(void) {
 #endif // VBP
 
       writebuffer(desttype, buff, address, savelength);
+      bitbang(address >> 8);
+      bitbang(address & 0xFF);
 
 
     }

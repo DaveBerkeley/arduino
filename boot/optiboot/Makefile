@@ -127,6 +127,7 @@ STK500-2 = $(STK500) -d$(MCU_TARGET) -ms -q -lCF -LCF -cUSB -I200kHz -s -wt
 # End of build environment code.
 
 I2CDIR = ../../libraries/radionet
+#I2C = 
 I2C = $(I2CDIR)/i2c.o  $(I2CDIR)/pinio.o 
 
 OBJ        = $(PROGRAM).o $(I2C)
@@ -305,7 +306,7 @@ atmega328: TARGET = atmega328
 atmega328: MCU_TARGET = atmega328p
 atmega328: CFLAGS += $(COMMON_OPTIONS)
 atmega328: AVR_FREQ ?= 16000000L
-atmega328: LDSECTIONS  = -Wl,--section-start=.text=0x7a00 -Wl,--section-start=.version=0x7ffe
+atmega328: LDSECTIONS  = -Wl,--section-start=.text=0x7800 -Wl,--section-start=.version=0x7ffe
 atmega328: $(PROGRAM)_atmega328.hex
 atmega328: $(PROGRAM)_atmega328.lst
 
