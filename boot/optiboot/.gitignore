@@ -1,5 +1,5 @@
 *.swp
 *~
 baudcheck.tmp.sh
-*.hex
+optiboot_atmega328.hex
 *.lst
