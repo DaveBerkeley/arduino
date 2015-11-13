@@ -17,6 +17,9 @@
  USA
 */
 
+#if !defined(PINIO_H)
+#define PINIO_H
+
     /*
      *  I2C Implementation
      */
@@ -51,5 +54,7 @@ bool pin_get(const PinIo* pin);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // defined(PINIO_H)
 
 // FIN

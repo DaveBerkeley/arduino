@@ -17,6 +17,9 @@
  USA
 */
 
+#if !defined(I2C_H)
+#define I2C_H
+
 #include "pinio.h"
 
     /*
@@ -65,5 +68,7 @@ void i2c_probe(FlashIO* io);
 #ifdef __cplusplus
 }
 #endif
+
+#endif // I2C_H
 
 // FIN
