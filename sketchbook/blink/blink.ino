@@ -1,5 +1,5 @@
 
-#define LED 6
+#define LED 4
 
 void setup()
 {
@@ -13,5 +13,5 @@ void loop()
   
   digitalWrite(LED, on ? LOW : HIGH);
   on = !on;
-  delay(2000);
+  delay(1000);
 }
