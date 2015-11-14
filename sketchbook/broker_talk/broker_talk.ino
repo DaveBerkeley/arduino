@@ -91,10 +91,10 @@ static void packet_to_host(void)
   Bencode::to_host((int) rf12_hdr, (uint8_t*) rf12_data, (int) rf12_len);
 }
 
-static void send_fn(const void* data, int bytes)
-{
-  Bencode::to_host(GATEWAY_ID, (const uint8_t*) data, bytes);    
-}
+//static void send_fn(const void* data, int bytes)
+//{
+//  Bencode::to_host(GATEWAY_ID, (const uint8_t*) data, bytes);    
+//}
 
     /*
     *   Sleepy / Unknown maps

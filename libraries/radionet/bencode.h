@@ -8,17 +8,16 @@
 class Packet
 {
 public:
-  int node;
-  int length;
-  unsigned char data[MAX_PACKET_DATA];
+    int node;
+    int length;
+    unsigned char data[MAX_PACKET_DATA];
 
-  void reset()
-  {
-      node = 0;
-      length = -1;
-  }
+    void reset()
+    {
+        node = 0;
+        length = -1;
+    }
 };
-
 
     /*
     *   Bencode Parser : for host->radio communication
