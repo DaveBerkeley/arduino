@@ -57,7 +57,7 @@ int Bencode::parse(Packet* msg, unsigned char c)
       
       case LENGTH : {
         if (c == ':') {
-          if (msg->length >= MAX_DATA) {
+          if (msg->length >= MAX_PACKET_DATA) {
             reset(msg);
             return 0;
           }

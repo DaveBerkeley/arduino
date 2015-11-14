@@ -251,7 +251,7 @@ static void add_packet_info(Message* msg)
 {
     const uint8_t c = spare_packets();
     msg->append(PRESENT_PACKET_COUNT, & c, sizeof(c));
-    const uint16_t d = MAX_DATA;
+    const uint16_t d = MAX_PACKET_DATA;
     msg->append(0, & d, sizeof(d));
 }
 

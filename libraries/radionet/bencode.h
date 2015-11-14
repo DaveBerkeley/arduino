@@ -3,14 +3,14 @@
   *
   */
 
-#define MAX_DATA 86 // TODO : what is the min this can be?
+#define MAX_PACKET_DATA 86 // TODO : what is the min this can be?
 
 class Packet
 {
 public:
   int node;
   int length;
-  unsigned char data[MAX_DATA];
+  unsigned char data[MAX_PACKET_DATA];
 
   void reset()
   {
