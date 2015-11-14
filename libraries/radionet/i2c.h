@@ -52,6 +52,37 @@ bool i2c_save(I2C* i2c, uint16_t page, uint8_t offset, const void* buf, int coun
 }
 #endif
 
+    /*
+     *  Interface to Flash Memory.
+     */
+
+typedef struct {
+    uint16_t    pages;
+    uint16_t    page_size;
+}   _FlashInfo;
+
+typedef struct {
+    I2C* i2c;
+    _FlashInfo info;
+}   FlashIO;
+
+//  Data Transfer.
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+typedef void (*flash_iter)(const FlashIO* io, void* obj, uint16_t block, uint16_t offset, uint16_t bytes, uint8_t* data);
+
+void flash_block(const FlashIO* io, void* obj, uint32_t addr, uint16_t bytes, uint8_t* data, flash_iter fn);
+
+uint16_t flash_save(const FlashIO* io, uint32_t addr, uint16_t bytes, uint8_t* data);
+uint16_t flash_read(const FlashIO* io, uint32_t addr, uint16_t bytes, uint8_t* data);
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif // I2C_H
 
 // FIN

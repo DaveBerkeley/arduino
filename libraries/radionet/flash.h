@@ -23,24 +23,9 @@
      *  Interface to Flash Memory.
      */
 
-typedef struct {
-    uint16_t    pages;
-    uint16_t    page_size;
-}   _FlashInfo;
-
-typedef struct {
-    I2C* i2c;
-    _FlashInfo info;
-}   FlashIO;
-
 bool flash_init(FlashIO* io, 
         void (*debug_fn)(const char* text), 
         void (*send_fn)(const void* data, int length)=0);
-
-//  Data Transfer.
-
-uint16_t flash_save(const FlashIO* io, uint32_t addr, uint16_t bytes, uint8_t* data);
-uint16_t flash_read(const FlashIO* io, uint32_t addr, uint16_t bytes, uint8_t* data);
 
 class Message;
 

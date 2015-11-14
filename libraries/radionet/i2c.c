@@ -193,4 +193,48 @@ bool i2c_save(I2C* i2c, uint16_t page, uint8_t offset, const void* buff, int cou
     return ok;
 }
 
+    /*
+     *  Block Iterator to handle Flash page boundaries.
+     */
+
+#define min(a, b) (((a) < (b)) ? (a) : (b))
+
+void flash_block(const FlashIO* io, void* obj, uint32_t addr, uint16_t bytes, uint8_t* data, flash_iter fn)
+{
+    //  calculate block / offset etc.
+    while (bytes) {
+        const uint16_t page = addr / 256;
+        const uint16_t offset = addr % 256;
+        const uint16_t size = min(bytes, 256 - offset);
+
+        if (page >= io->info.pages)
+            return;
+
+        fn(io, obj, page, offset, size, data);
+
+        data += size;
+        bytes -= size;
+        addr += size;
+    }
+} 
+
+    /*
+     *  Read data from Flash
+     */
+
+static void reader(const FlashIO* io, void* obj, uint16_t block, uint16_t offset, uint16_t bytes, uint8_t* data)
+{
+    uint16_t* xfered = (uint16_t*) obj;
+
+    if (i2c_load(io->i2c, block, offset, data, bytes))
+        *xfered += bytes;
+}
+
+uint16_t flash_read(const FlashIO* io, uint32_t addr, uint16_t bytes, uint8_t* data)
+{
+    uint16_t xfered = 0;
+    flash_block(io, & xfered, addr, bytes, data, reader);
+    return xfered;
+}
+
 // FIN
