@@ -22,8 +22,6 @@
 
 #include "i2c.h"
 
-#define min(a, b) (((a) < (b)) ? (a) : (b))
-
     /*
      *  I2C library.
      *
