@@ -127,8 +127,13 @@ STK500-2 = $(STK500) -d$(MCU_TARGET) -ms -q -lCF -LCF -cUSB -I200kHz -s -wt
 # End of build environment code.
 
 I2CDIR = ../../libraries/radionet
+
+# For original optiboot
 #I2C = 
+#BOOTA=0x7e00
+# For larger optiboot
 I2C = $(I2CDIR)/i2c.o  $(I2CDIR)/pinio.o 
+BOOTA=0x7800
 
 OBJ        = $(PROGRAM).o $(I2C)
 OPTIMIZE = -Os -fno-split-wide-types -mrelax
@@ -306,7 +311,7 @@ atmega328: TARGET = atmega328
 atmega328: MCU_TARGET = atmega328p
 atmega328: CFLAGS += $(COMMON_OPTIONS)
 atmega328: AVR_FREQ ?= 16000000L
-atmega328: LDSECTIONS  = -Wl,--section-start=.text=0x7800 -Wl,--section-start=.version=0x7ffe
+atmega328: LDSECTIONS  = -Wl,--section-start=.text=$(BOOTA) -Wl,--section-start=.version=0x7ffe
 atmega328: $(PROGRAM)_atmega328.hex
 atmega328: $(PROGRAM)_atmega328.lst
 
