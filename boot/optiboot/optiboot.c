@@ -454,34 +454,38 @@ void appStart(uint8_t rstFlags) __attribute__ ((naked));
 //};
 
 #define MASK (1 << 4)
+#define PORTx PORTD
+#define DDRx DDRD
+
+void set(bool state)
+{
+    // about 115200 baud
+    int i;
+    for (i = 0; i < 11; ++i) {
+        if (state) {
+            PORTx |= MASK;
+        } else {
+            PORTx &= ~MASK;
+        }
+    }
+}
 
 void initbang()
 {
-  PORTD |= MASK;
-  DDRD |= MASK;
-  {
-      uint8_t i;
-      for (i = 0; i < 40; ++i) {
-          PORTD |= MASK;
-      }
-  }
+  set(1);
+  DDRx |= MASK;
+  set(1);
 }
 
 void bitbang(uint8_t data) {
-    PORTD &= ~MASK;
-    PORTD &= ~MASK;
+    set(0);
     uint8_t mask = 0x01;
     while (mask) {
-        if (data & mask) {
-            PORTD |= MASK;
-        } else {
-            PORTD &= ~MASK;
-        }
+        set(data & mask);
         mask <<= 1;
     }
-    for (mask = 0; mask < 3; ++mask) {
-        PORTD |= MASK;
-    }
+    set(1);
+    set(1);
 }
 
 
@@ -582,7 +586,11 @@ int main(void) {
 
   initbang();
   //uint8_t loops = 0;
-  //bitbang(0x00);
+  bitbang('h');
+  bitbang('e');
+  bitbang('l');
+  bitbang('l');
+  bitbang('o');
 
   /* Forever loop: exits by causing WDT reset */
   for (;;) {
