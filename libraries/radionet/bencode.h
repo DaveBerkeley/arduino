@@ -24,7 +24,7 @@ public:
     *   Bencode Parser : for host->radio communication
     */
 
-class Parser
+class Bencode
 {
     enum PARSE_STATE
     {
@@ -39,7 +39,7 @@ public:
     unsigned char* next_data;
     int count;
 
-    Parser();
+    Bencode();
 
     void reset(Packet* msg);
     int parse(Packet* msg, unsigned char c);

@@ -88,12 +88,12 @@ static int8_t leds[] = {
 static void packet_to_host(void)
 {
   // send the packet in Bencode to the host    
-  Parser::to_host((int) rf12_hdr, (uint8_t*) rf12_data, (int) rf12_len);
+  Bencode::to_host((int) rf12_hdr, (uint8_t*) rf12_data, (int) rf12_len);
 }
 
 static void send_fn(const void* data, int bytes)
 {
-  Parser::to_host(GATEWAY_ID, (const uint8_t*) data, bytes);    
+  Bencode::to_host(GATEWAY_ID, (const uint8_t*) data, bytes);    
 }
 
     /*
@@ -260,7 +260,7 @@ static void notify_packet_send()
   // Inform host of packet send status
   Message msg(make_mid(), GATEWAY_ID);
   add_packet_info(& msg);
-  Parser::to_host(GATEWAY_ID, (uint8_t*) msg.data(), msg.size());
+  Bencode::to_host(GATEWAY_ID, (uint8_t*) msg.data(), msg.size());
 }
 
 static uint8_t read_data(uint8_t* data, int length) {
@@ -305,7 +305,7 @@ static int decode_command(uint8_t* data, int length)
   // Add info / status of packet buffer.
   add_packet_info(& response);
 
-  Parser::to_host(GATEWAY_ID, (uint8_t*) response.data(), response.size());
+  Bencode::to_host(GATEWAY_ID, (uint8_t*) response.data(), response.size());
 
   return 1;
 }
@@ -326,7 +326,7 @@ static void on_timer()
   *
   */
 
-static Parser parser;
+static Bencode parser;
 
 void setup () {
   Serial.begin(57600);

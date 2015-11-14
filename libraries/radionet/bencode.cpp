@@ -9,12 +9,12 @@
     *   Bencode Parser : for host->radio communication
     */
 
-Parser::Parser()
+Bencode::Bencode()
 : state(WAIT)
 {
 }
 
-void Parser::reset(Packet* msg)
+void Bencode::reset(Packet* msg)
 {
     msg->reset();
     count = 0;
@@ -22,7 +22,7 @@ void Parser::reset(Packet* msg)
     state = WAIT;
 }
 
-int Parser::parse(Packet* msg, unsigned char c)
+int Bencode::parse(Packet* msg, unsigned char c)
 {
     switch (state)
     {
@@ -90,7 +90,7 @@ int Parser::parse(Packet* msg, unsigned char c)
     return 0;
 }
 
-void Parser::to_host(int node, const uint8_t* data, int bytes)
+void Bencode::to_host(int node, const uint8_t* data, int bytes)
 {
     // send the packet in Bencode to the host        
     Serial.print("li");
