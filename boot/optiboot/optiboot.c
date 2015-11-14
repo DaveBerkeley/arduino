@@ -447,6 +447,37 @@ void appStart(uint8_t rstFlags) __attribute__ ((naked));
 
 #define min(a, b) (((a) < (b)) ? (a) : (b))
 
+void copy_i2c_to_program_flash(I2C* i2c, uint32_t addr, uint16_t bytes)
+{
+    // Program Flash is in 128 byte pages on the atmega328
+    // Read in 128 byte chunks. These are written to program flash
+    // preceeded by an erase, so we have to feed it page sized chunks.
+    uint8_t data[128];
+    uint16_t wr_addr = 0;
+    FlashIO io = { i2c, };
+    io.info.page_size = 256;
+    io.info.pages = 128 * (1204 / 256); // assume 128k
+
+    while (bytes) {
+        const uint16_t size = min(bytes, sizeof(data));
+
+        flash_read(& io, addr, size, & data);
+
+        // TODO : write it to the flash
+        // void writebuffer('P', data, wr_addr, sizeof(data));
+
+        bytes -= size;
+        addr += size;
+        wr_addr += size;
+
+        // TODO : remove me
+        break;
+    }
+
+    //  TODO :
+    //  Erase the BOOTDATA record in the i2c flash
+}
+
 typedef struct {
     uint8_t     name[8];
     uint32_t    addr;
@@ -454,11 +485,11 @@ typedef struct {
     uint16_t    crc;
 }   _FlashSlot;
 
-bool check_i2c_flash(I2C* i2c)
+void check_i2c_flash(I2C* i2c)
 {
     i2c_init(i2c);
     if (!i2c_is_present(i2c))
-        return false;
+        return;
 
     uint32_t addr;
     uint16_t bytes;
@@ -468,45 +499,23 @@ bool check_i2c_flash(I2C* i2c)
         _FlashSlot slot;
 
         if (!i2c_load(i2c, 0, 0, & slot, sizeof(slot)))
-            return false;
+            return;
 
-        if (strcmp(slot.name, "BOOTDATA"))
-            return false;
-
-        if (slot.name[0] != 'B')    return false;
-        if (slot.name[1] != 'O')    return false;
-        if (slot.name[2] != 'O')    return false;
-        if (slot.name[3] != 'T')    return false;
-        if (slot.name[4] != 'D')    return false;
-        if (slot.name[5] != 'A')    return false;
-        if (slot.name[6] != 'T')    return false;
-        if (slot.name[7] != 'A')    return false;
+        if (slot.name[0] != 'B')    return;
+        if (slot.name[1] != 'O')    return;
+        if (slot.name[2] != 'O')    return;
+        if (slot.name[3] != 'T')    return;
+        if (slot.name[4] != 'D')    return;
+        if (slot.name[5] != 'A')    return;
+        if (slot.name[6] != 'T')    return;
+        if (slot.name[7] != 'A')    return;
 
         addr = slot.addr;
         bytes = slot.bytes;
     }
 
-    uint8_t data[256];
-
-    while (bytes) {
-        const uint16_t page = addr / 256;
-        const uint8_t offset = addr % 256;
-        const uint16_t size = min(bytes, 256 - offset);
-
-        if (!i2c_load(i2c, page, offset, data, size))
-            return false;
-
-        // write it to the flash
-
-        bytes -= size;
-        addr += size;
-        
-        // TODO : remove me
-        break;
-    }
-
-    i2c_is_present(i2c);
-    return false;
+    copy_i2c_to_program_flash(i2c, addr, bytes);
+    // TODO : reboot ?
 }
 
 /* main program starts here */
@@ -552,14 +561,12 @@ int main(void) {
   if (ch & (_BV(WDRF) | _BV(BORF) | _BV(PORF)))
       appStart(ch);
 
-  // Mystified why putting mask in the data definition doesn't work
-  PinIo sda = { & DDRD, & PORTD, & PIND, };
-  PinIo scl = { & DDRC, & PORTC, & PIND, };
-  // so have to set it manually here.
-  sda.mask = 1 << 4;
-  scl.mask = 1 << 0;
-
+  PinIo sda;
+  PinIo scl;
   I2C i2c = { & sda, & scl, 0x50 << 1, };
+
+  pin_init(& sda, & DDRD, & PORTD, & PIND, 4);
+  pin_init(& scl, & DDRC, & PORTC, & PINC, 0);
 
   check_i2c_flash(& i2c);
 
@@ -725,8 +732,6 @@ int main(void) {
 #endif // VBP
 
       writebuffer(desttype, buff, address, savelength);
-      //bitbang(address >> 8);
-      //bitbang(address & 0xFF);
 
 
     }
@@ -939,7 +944,7 @@ void appStart(uint8_t rstFlags) {
 /*
  * void writebuffer(memtype, buffer, address, length)
  */
-static inline void writebuffer(int8_t memtype, uint8_t *mybuff,
+static void writebuffer(int8_t memtype, uint8_t *mybuff,
 			       uint16_t address, pagelen_t len)
 {
     switch (memtype) {
