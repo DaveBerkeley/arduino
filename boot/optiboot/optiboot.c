@@ -487,26 +487,21 @@ int main(void) {
   if (ch & (_BV(WDRF) | _BV(BORF) | _BV(PORF)))
       appStart(ch);
 
-  PinIo d4 = PinIoD(4);
-  PinIo a0 = PinIoC(0);
+  // Mystified why putting mask in the data definition doesn't work
+  PinIo sda = { & DDRD, & PORTD, & PIND, };
+  PinIo scl = { & DDRC, & PORTC, & PIND, };
+  // so have to set it manually here.
+  sda.mask = 1 << 4;
+  scl.mask = 1 << 0;
 
-  d4.mask = 1 << 4;
-  d4.ddr = & DDRD;
-  d4.data = & PORTD;
-  d4.pin = & PIND;
-  a0.mask = 1 << 0;
-  a0.ddr = & DDRC;
-  a0.data = & PORTC;
-  a0.pin = & PINC;
-
-  I2C i2c = {
-      & d4,   //  SDA
-      & a0,   //  SCL
-      0x50 << 1,
-  };
+  I2C i2c = { & sda, & scl, 0x50 << 1, };
 
   i2c_init(& i2c);
-  i2c_is_present(& i2c);
+  int i;
+  for (i = 0; i < 4; ++i) {
+      if (i2c_is_present(& i2c))
+          break;
+  }
 
 #if LED_START_FLASHES > 0
   // Set up Timer 1 for timeout counter
