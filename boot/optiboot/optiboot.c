@@ -444,15 +444,6 @@ void appStart(uint8_t rstFlags) __attribute__ ((naked));
 #include <i2c.h>
 #include <pinio.h>
 
-//static PinIo d4 = PinIoD(4);
-//static PinIo a0 = PinIoC(0);
-
-//static I2C i2c = {
-//    & d4,   //  SDA
-//    & a0,   //  SCL
-//    0x50 << 1,
-//};
-
 #define MASK (1 << 4)
 #define PORTx PORTD
 #define DDRx DDRD
@@ -461,12 +452,17 @@ void set(bool state)
 {
     // about 115200 baud
     int i;
-    for (i = 0; i < 11; ++i) {
+    for (i = 0; i < 10; ++i) {
         if (state) {
             PORTx |= MASK;
         } else {
             PORTx &= ~MASK;
         }
+    }
+    if (state) {
+        PORTx |= MASK;
+    } else {
+        PORTx &= ~MASK;
     }
 }
 
@@ -492,21 +488,6 @@ void bitbang(uint8_t data) {
 /* main program starts here */
 int main(void) {
   uint8_t ch;
-
-#if 0
-  uint8_t m = 1 << 4;
-  DDRD |= m;
-  PORTD &= ~m;
-
-  i2c_init(& i2c);
-  PORTD |= m;
-
-  while (0) {
-  PORTD &= ~m;
-      i2c_is_present(& i2c);
-  PORTD |= m;
-  }
-#endif
 
   /*
    * Making these local and in registers prevents the need for initializing
@@ -547,6 +528,27 @@ int main(void) {
   if (ch & (_BV(WDRF) | _BV(BORF) | _BV(PORF)))
       appStart(ch);
 
+  PinIo d4 = PinIoD(4);
+  PinIo a0 = PinIoC(0);
+
+  d4.mask = 1 << 4;
+  d4.ddr = & DDRD;
+  d4.data = & PORTD;
+  d4.pin = & PIND;
+  a0.mask = 1 << 0;
+  a0.ddr = & DDRC;
+  a0.data = & PORTC;
+  a0.pin = & PINC;
+
+  I2C i2c = {
+      & d4,   //  SDA
+      & a0,   //  SCL
+      0x50 << 1,
+  };
+
+  i2c_init(& i2c);
+  i2c_is_present(& i2c);
+
 #if LED_START_FLASHES > 0
   // Set up Timer 1 for timeout counter
   TCCR1B = _BV(CS12) | _BV(CS10); // div 1024
@@ -584,20 +586,10 @@ int main(void) {
   flash_led(LED_START_FLASHES * 2);
 #endif
 
-  initbang();
-  //uint8_t loops = 0;
-  bitbang('h');
-  bitbang('e');
-  bitbang('l');
-  bitbang('l');
-  bitbang('o');
-
   /* Forever loop: exits by causing WDT reset */
   for (;;) {
-    //bitbang(loops++);
     /* get character from UART */
     ch = getch();
-    //bitbang(loops++);
 
     if(ch == STK_GET_PARAMETER) {
       unsigned char which = getch();
@@ -719,8 +711,8 @@ int main(void) {
 #endif // VBP
 
       writebuffer(desttype, buff, address, savelength);
-      bitbang(address >> 8);
-      bitbang(address & 0xFF);
+      //bitbang(address >> 8);
+      //bitbang(address & 0xFF);
 
 
     }
