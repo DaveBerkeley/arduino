@@ -358,7 +358,9 @@ void __attribute__((noinline)) verifySpace();
 void __attribute__((noinline)) watchdogConfig(uint8_t x);
 
 static inline void getNch(uint8_t);
+#if LED_START_FLASHES > 0
 static inline void flash_led(uint8_t);
+#endif
 static inline void watchdogReset();
 static inline void writebuffer(int8_t memtype, uint8_t *mybuff,
 			       uint16_t address, pagelen_t len);
@@ -461,7 +463,7 @@ void copy_i2c_to_program_flash(I2C* i2c, uint32_t addr, uint16_t bytes)
     while (bytes) {
         const uint16_t size = min(bytes, sizeof(data));
 
-        flash_read(& io, addr, size, & data);
+        flash_read(& io, addr, size, data);
 
         // TODO : write it to the flash
         // void writebuffer('P', data, wr_addr, sizeof(data));
@@ -477,13 +479,6 @@ void copy_i2c_to_program_flash(I2C* i2c, uint32_t addr, uint16_t bytes)
     //  TODO :
     //  Erase the BOOTDATA record in the i2c flash
 }
-
-typedef struct {
-    uint8_t     name[8];
-    uint32_t    addr;
-    uint16_t    bytes;
-    uint16_t    crc;
-}   _FlashSlot;
 
 void check_i2c_flash(I2C* i2c)
 {

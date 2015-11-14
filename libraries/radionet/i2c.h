@@ -66,6 +66,15 @@ typedef struct {
     _FlashInfo info;
 }   FlashIO;
 
+//  Slots used at addr==0 to describe files
+
+typedef struct {
+    uint8_t     name[8];
+    uint32_t    addr;
+    uint16_t    bytes;
+    uint16_t    crc;
+}   _FlashSlot;
+
 //  Data Transfer.
 
 #ifdef __cplusplus

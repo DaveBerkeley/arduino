@@ -127,13 +127,6 @@ typedef struct {
 }   FlashSlotReq;
 
 typedef struct {
-    uint8_t     name[8];
-    uint32_t    addr;
-    uint16_t    bytes;
-    uint16_t    crc;
-}   _FlashSlot;
-
-typedef struct {
     uint8_t     cmd;
     uint8_t     req_id;
     uint8_t     slot;
