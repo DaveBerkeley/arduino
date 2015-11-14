@@ -18,11 +18,11 @@
  USA
 */
 
-
 #include <JeeLib.h>
 
 #include <radionet.h>
 #include <led.h>
+#include <bencode.h>
 
 #include <OneWire.h>
 #include <DallasTemperature.h>
@@ -85,149 +85,15 @@ static int8_t leds[] = {
   -1,
 };
 
-  /*
-  *
-  */
-
-#define MAX_DATA 86 // TODO : what is the min this can be?
-
-class Packet
-{
-public:
-  int node;
-  int length;
-  unsigned char data[MAX_DATA];
-
-  void reset()
-  {
-      node = 0;
-      length = -1;
-  }
-};
-
-    /*
-    *   Bencode Parser : for host->radio communication
-    */
-
-class Parser
-{
-  enum PARSE_STATE
-  {
-    WAIT,
-    NODE,
-    LENGTH,
-    DATA,
-  };
-
-public:
-  PARSE_STATE state;
-  unsigned char* next_data;
-  int count;
-
-  Parser()
-  : state(WAIT)
-  {
-  }
-
-  void reset(Packet* msg)
-  {
-    msg->reset();
-    count = 0;
-    next_data = 0;
-    state = WAIT;
-  }
-
-  int parse(Packet* msg, unsigned char c)
-  {
-    switch (state)
-    {
-      case WAIT : {
-        if (c == 'l') {
-          state = NODE;
-          return 0;
-        }
- 
-        reset(msg);      
-        return 0;
-      }
-      case NODE : {
-        if (c == 'i') {
-          msg->node = 0;
-          return 0;
-        }
-        if ((c >= '0') && (c <= '9')) {
-          msg->node *= 10;
-          msg->node += c - '0';
-          return 0;
-        }
-        if (c == 'e') {
-          msg->length = 0;
-          state = LENGTH;
-          return 0;
-        }
-        
-        reset(msg);
-        return 0;
-      }
-      
-      case LENGTH : {
-        if (c == ':') {
-          if (msg->length >= MAX_DATA) {
-            reset(msg);
-            return 0;
-          }
-          state = DATA;
-          count = 0;
-          next_data = msg->data;
-          return 0;
-        }
-        if ((c >= '0') && (c <= '9')) {
-          msg->length *= 10;
-          msg->length += c - '0';
-          return 0;
-        }
-        
-        reset(msg);
-        return 0;
-      }
-      
-      case DATA : {
-        if (count < msg->length) {
-          *next_data++ = c;
-          count++;
-          return 0;
-        }
-        
-        // done : message is complete
-        return 1;
-      }
-    }
-    return 0;
-  }
-};
-
-static void to_host(int node, const uint8_t* data, int bytes)
-{
-  // send the packet in Bencode to the host        
-  Serial.print("li");
-  Serial.print(node);
-  Serial.print("e");
-  Serial.print(bytes);
-  Serial.print(":");
-  for (int i = 0; i < bytes; ++i)
-    Serial.print((char) data[i]);
-  Serial.print("e");
-}
-
 static void packet_to_host(void)
 {
   // send the packet in Bencode to the host    
-  to_host((int) rf12_hdr, (uint8_t*) rf12_data, (int) rf12_len);
+  Parser::to_host((int) rf12_hdr, (uint8_t*) rf12_data, (int) rf12_len);
 }
 
 static void send_fn(const void* data, int bytes)
 {
-  to_host(GATEWAY_ID, (const uint8_t*) data, bytes);    
+  Parser::to_host(GATEWAY_ID, (const uint8_t*) data, bytes);    
 }
 
     /*
@@ -363,8 +229,6 @@ static Packet* next_host_packet()
         return p;
 
     // Need to overwrite an allocated packet.
-    //tx_debug("overwrite!");
-    //unknown_led.set(10);
     p = host_packet + 1;
     if (p >= & packets[MAX_PACKETS])
         p = & packets[0];
@@ -396,7 +260,7 @@ static void notify_packet_send()
   // Inform host of packet send status
   Message msg(make_mid(), GATEWAY_ID);
   add_packet_info(& msg);
-  to_host(GATEWAY_ID, (uint8_t*) msg.data(), msg.size());
+  Parser::to_host(GATEWAY_ID, (uint8_t*) msg.data(), msg.size());
 }
 
 static uint8_t read_data(uint8_t* data, int length) {
@@ -441,20 +305,10 @@ static int decode_command(uint8_t* data, int length)
   // Add info / status of packet buffer.
   add_packet_info(& response);
 
-  to_host(GATEWAY_ID, (uint8_t*) response.data(), response.size());
+  Parser::to_host(GATEWAY_ID, (uint8_t*) response.data(), response.size());
 
   return 1;
 }
-
-    /*
-     *  Send Debug message
-    */
-
-//void tx_debug(const char* h)
-//{
-//    // NOTE : CRASHES HOST PARSER!
-//    to_host(-1, (uint8_t*) h, (int) strlen(h));
-//}
 
     /*
     *   Timer Interrupt
@@ -504,7 +358,6 @@ void setup () {
   MsTimer2::start();
 }
 
-//MilliTimer ledTimer;
 #define FLASH_PERIOD 1
 
 #define MAX_DEVS 32 // defined elsewhere?
