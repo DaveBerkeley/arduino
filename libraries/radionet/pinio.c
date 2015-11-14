@@ -22,6 +22,18 @@
 
 #include "pinio.h"
 
+void pin_init(PinIo* io, 
+        volatile uint8_t* ddr, 
+        volatile uint8_t* data, 
+        volatile uint8_t* pin, 
+        uint8_t bit)
+{
+    io->ddr = ddr;
+    io->data = data;
+    io->pin = pin;
+    io->mask = 1 << bit;
+}
+
     /*
      *  Pin IO functions.
      */

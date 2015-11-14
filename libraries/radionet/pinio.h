@@ -39,6 +39,12 @@ typedef struct {
 extern "C" {
 #endif
 
+void pin_init(PinIo* io, 
+        volatile uint8_t* ddr, 
+        volatile uint8_t* data, 
+        volatile uint8_t* pin, 
+        uint8_t bit);
+
 static inline void pin_change(volatile uint8_t* reg, uint8_t mask, bool state)
 {
     if (state)
