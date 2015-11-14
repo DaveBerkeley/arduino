@@ -440,9 +440,74 @@ void appStart(uint8_t rstFlags) __attribute__ ((naked));
 #endif // VIRTUAL_BOOT_PARTITION
 
 #include <stdbool.h>
+#include <string.h>
 
 #include <i2c.h>
 #include <pinio.h>
+
+#define min(a, b) (((a) < (b)) ? (a) : (b))
+
+typedef struct {
+    uint8_t     name[8];
+    uint32_t    addr;
+    uint16_t    bytes;
+    uint16_t    crc;
+}   _FlashSlot;
+
+bool check_i2c_flash(I2C* i2c)
+{
+    i2c_init(i2c);
+    if (!i2c_is_present(i2c))
+        return false;
+
+    uint32_t addr;
+    uint16_t bytes;
+
+    {
+        //  Read slot 0 to see if it has any boot data
+        _FlashSlot slot;
+
+        if (!i2c_load(i2c, 0, 0, & slot, sizeof(slot)))
+            return false;
+
+        if (strcmp(slot.name, "BOOTDATA"))
+            return false;
+
+        if (slot.name[0] != 'B')    return false;
+        if (slot.name[1] != 'O')    return false;
+        if (slot.name[2] != 'O')    return false;
+        if (slot.name[3] != 'T')    return false;
+        if (slot.name[4] != 'D')    return false;
+        if (slot.name[5] != 'A')    return false;
+        if (slot.name[6] != 'T')    return false;
+        if (slot.name[7] != 'A')    return false;
+
+        addr = slot.addr;
+        bytes = slot.bytes;
+    }
+
+    uint8_t data[256];
+
+    while (bytes) {
+        const uint16_t page = addr / 256;
+        const uint8_t offset = addr % 256;
+        const uint16_t size = min(bytes, 256 - offset);
+
+        if (!i2c_load(i2c, page, offset, data, size))
+            return false;
+
+        // write it to the flash
+
+        bytes -= size;
+        addr += size;
+        
+        // TODO : remove me
+        break;
+    }
+
+    i2c_is_present(i2c);
+    return false;
+}
 
 /* main program starts here */
 int main(void) {
@@ -496,12 +561,7 @@ int main(void) {
 
   I2C i2c = { & sda, & scl, 0x50 << 1, };
 
-  i2c_init(& i2c);
-  int i;
-  for (i = 0; i < 4; ++i) {
-      if (i2c_is_present(& i2c))
-          break;
-  }
+  check_i2c_flash(& i2c);
 
 #if LED_START_FLASHES > 0
   // Set up Timer 1 for timeout counter
