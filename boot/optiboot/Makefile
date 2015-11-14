@@ -131,7 +131,10 @@ I2CDIR = ../../libraries/radionet
 # For original optiboot
 #I2C = 
 #BOOTA=0x7e00
+
 # For larger optiboot
+# Notes : need to change the HFUSE settings when flashing the 
+# bootloader to allow for the larger boot section size.
 I2C = $(I2CDIR)/i2c.o  $(I2CDIR)/pinio.o 
 BOOTA=0x7800
 

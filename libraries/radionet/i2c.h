@@ -37,20 +37,6 @@ typedef struct {
     int16_t     retries;    //  Polled mode retries
 }   I2C;
 
-    /*
-     *  Interface to Flash Memory.
-     */
-
-typedef struct {
-    uint16_t    pages;
-    uint16_t    page_size;
-}   _FlashInfo;
-
-typedef struct {
-    I2C* i2c;
-    _FlashInfo info;
-}   FlashIO;
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -61,9 +47,6 @@ bool i2c_is_present(I2C* i2c);
 
 bool i2c_load(I2C* i2c, uint16_t page, uint8_t offset, void* buf, int count);
 bool i2c_save(I2C* i2c, uint16_t page, uint8_t offset, const void* buf, int count);
-
-// Detect the size of EEPROM
-void i2c_probe(FlashIO* io);
 
 #ifdef __cplusplus
 }

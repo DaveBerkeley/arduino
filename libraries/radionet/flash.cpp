@@ -153,6 +153,32 @@ bool flash_fast_poll()
     return fast_poll;
 }
 
+    /*
+     *  Detect EEPROM
+     */
+
+static uint16_t probe(I2C* i2c, uint16_t max_page)
+{
+    uint8_t c;
+    uint16_t page;
+
+    for (page = 0; page <= max_page; page += 0x100)
+        if (!i2c_load(i2c, page, 0, & c, sizeof(c)))
+            break;
+    return page;
+}
+
+static void flash_probe(FlashIO* io)
+{
+    // reduce retries as we are using NAK fails to detect EEPROM
+    const int16_t was = io->i2c->retries;
+    io->i2c->retries = 1;
+    io->info.page_size = 256;
+    const uint16_t max_pages = 1024 * (1024 / 256); // 1MB
+    io->info.pages = probe(io->i2c, max_pages);
+    // restore the retries count
+    io->i2c->retries = was;
+}
 
     /*
      *
@@ -171,7 +197,7 @@ bool flash_init(FlashIO* io,
 
     if (i2c_is_present(io->i2c)) {
         // Probe memory device to find its size.
-        i2c_probe(io);
+        flash_probe(io);
 #if defined(ALLOW_VERBOSE)
         if (debug_fn) {
             char buff[32];

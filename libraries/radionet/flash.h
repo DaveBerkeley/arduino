@@ -19,6 +19,20 @@
 
 #include "i2c.h"
 
+    /*
+     *  Interface to Flash Memory.
+     */
+
+typedef struct {
+    uint16_t    pages;
+    uint16_t    page_size;
+}   _FlashInfo;
+
+typedef struct {
+    I2C* i2c;
+    _FlashInfo info;
+}   FlashIO;
+
 bool flash_init(FlashIO* io, 
         void (*debug_fn)(const char* text), 
         void (*send_fn)(const void* data, int length)=0);

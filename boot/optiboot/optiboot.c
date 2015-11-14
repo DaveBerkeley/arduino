@@ -444,47 +444,6 @@ void appStart(uint8_t rstFlags) __attribute__ ((naked));
 #include <i2c.h>
 #include <pinio.h>
 
-#define MASK (1 << 4)
-#define PORTx PORTD
-#define DDRx DDRD
-
-void set(bool state)
-{
-    // about 115200 baud
-    int i;
-    for (i = 0; i < 10; ++i) {
-        if (state) {
-            PORTx |= MASK;
-        } else {
-            PORTx &= ~MASK;
-        }
-    }
-    if (state) {
-        PORTx |= MASK;
-    } else {
-        PORTx &= ~MASK;
-    }
-}
-
-void initbang()
-{
-  set(1);
-  DDRx |= MASK;
-  set(1);
-}
-
-void bitbang(uint8_t data) {
-    set(0);
-    uint8_t mask = 0x01;
-    while (mask) {
-        set(data & mask);
-        mask <<= 1;
-    }
-    set(1);
-    set(1);
-}
-
-
 /* main program starts here */
 int main(void) {
   uint8_t ch;
