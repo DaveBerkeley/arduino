@@ -48,7 +48,7 @@ static void poll_led(int pin, int* t)
 static void set_led(int pin, int* t)
 {
     digitalWrite(pin, LOW);
-    *t = 30000;
+    *t = 1000;
 }
 
 static void init_led(int pin)
