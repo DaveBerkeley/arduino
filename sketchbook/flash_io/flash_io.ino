@@ -31,8 +31,9 @@ static Packet packet;
 
 #define RD_LED 6
 #define WR_LED 7
+#define XX_LED 9
 
-static int rd_led, wr_led;
+static int rd_led, wr_led, xx_led;
 
 static void poll_led(int pin, int* t)
 {
@@ -48,6 +49,12 @@ static void set_led(int pin, int* t)
 {
     digitalWrite(pin, LOW);
     *t = 30000;
+}
+
+static void init_led(int pin)
+{
+    pinMode(pin, OUTPUT);    
+    digitalWrite(pin, HIGH);
 }
 
     /*
@@ -86,15 +93,15 @@ void setup()
     flash_init(& flash, debug_fn, send_fn);
     packet.reset();
 
-    pinMode(RD_LED, OUTPUT);    
-    digitalWrite(RD_LED, HIGH);
-    pinMode(WR_LED, OUTPUT);    
-    digitalWrite(WR_LED, HIGH);
+    init_led(RD_LED);
+    init_led(WR_LED);
+    init_led(XX_LED);
 }
 
 void loop()
 {
     if (Serial.available()) {
+        set_led(XX_LED, & xx_led);
         if (parser.parse(& packet, Serial.read())) {
             decode_command(packet.data, packet.length);
             parser.reset(& packet);
@@ -103,6 +110,7 @@ void loop()
 
     poll_led(RD_LED, & rd_led);
     poll_led(WR_LED, & wr_led);
+    poll_led(XX_LED, & xx_led);
 }
 
 // FIN
