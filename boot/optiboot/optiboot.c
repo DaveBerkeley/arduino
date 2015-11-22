@@ -449,37 +449,6 @@ void appStart(uint8_t rstFlags) __attribute__ ((naked));
 
 #define min(a, b) (((a) < (b)) ? (a) : (b))
 
-void copy_i2c_to_program_flash(I2C* i2c, uint32_t addr, uint16_t bytes)
-{
-    // Program Flash is in 128 byte pages on the atmega328
-    // Read in 128 byte chunks. These are written to program flash
-    // preceeded by an erase, so we have to feed it page sized chunks.
-    uint8_t data[128];
-    uint16_t wr_addr = 0;
-    FlashIO io = { i2c, };
-    io.info.page_size = 256;
-    io.info.pages = 128 * (1204 / 256); // assume 128k
-
-    while (bytes) {
-        const uint16_t size = min(bytes, sizeof(data));
-
-        flash_read(& io, addr, size, data);
-
-        // TODO : write it to the flash
-        // void writebuffer('P', data, wr_addr, sizeof(data));
-
-        bytes -= size;
-        addr += size;
-        wr_addr += size;
-
-        // TODO : remove me
-        break;
-    }
-
-    //  TODO :
-    //  Erase the BOOTDATA record in the i2c flash
-}
-
 void check_i2c_flash(I2C* i2c)
 {
     i2c_init(i2c);
@@ -509,7 +478,32 @@ void check_i2c_flash(I2C* i2c)
         bytes = slot.bytes;
     }
 
-    copy_i2c_to_program_flash(i2c, addr, bytes);
+    // Program Flash is in 128 byte pages on the atmega328
+    // Read in 128 byte chunks. These are written to program flash
+    // preceeded by an erase, so we have to feed it page sized chunks.
+    uint8_t data[128];
+    uint16_t wr_addr = 0;
+    FlashIO io = { i2c, };
+    io.info.page_size = 256;
+    io.info.pages = 128 * (1024 / 256); // assume 128k
+
+    while (bytes) {
+        const uint16_t size = min(bytes, sizeof(data));
+
+        flash_read(& io, addr, size, data);
+
+        // write it to the flash
+        writebuffer('P', data, wr_addr, sizeof(data));
+
+        bytes -= size;
+        addr += size;
+        wr_addr += size;
+    }
+
+    //  Erase the BOOTDATA record in the i2c flash
+    uint8_t erase = '\0';
+    i2c_save(i2c, 0, 0, & erase, sizeof(erase));
+
     // TODO : reboot ?
 }
 

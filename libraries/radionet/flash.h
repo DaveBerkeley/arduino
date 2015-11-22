@@ -31,6 +31,8 @@ class Message;
 
 bool flash_req_handler(FlashIO* io, Message* msg);
 
+uint16_t flash_save(const FlashIO* io, uint32_t addr, uint16_t bytes, uint8_t* data);
+
 bool flash_fast_poll();
 
 // FIN

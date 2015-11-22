@@ -39,11 +39,17 @@ typedef struct {
 extern "C" {
 #endif
 
-void pin_init(PinIo* io, 
+static inline void pin_init(PinIo* io, 
         volatile uint8_t* ddr, 
         volatile uint8_t* data, 
         volatile uint8_t* pin, 
-        uint8_t bit);
+        uint8_t bit)
+{
+    io->ddr = ddr;
+    io->data = data;
+    io->pin = pin;
+    io->mask = 1 << bit;
+}
 
 static inline void pin_change(volatile uint8_t* reg, uint8_t mask, bool state)
 {
@@ -53,9 +59,20 @@ static inline void pin_change(volatile uint8_t* reg, uint8_t mask, bool state)
         *reg &= ~mask;
 }
 
-void pin_mode(const PinIo* pin, bool output);
-void pin_set(const PinIo* pin, bool state);
-bool pin_get(const PinIo* pin);
+static inline void pin_mode(const PinIo* pin, bool output)
+{
+    pin_change(pin->ddr, pin->mask, output);
+}
+
+static inline void pin_set(const PinIo* pin, bool state)
+{
+    pin_change(pin->data, pin->mask, state);
+}
+
+static inline bool pin_get(const PinIo* pin)
+{
+    return pin->mask & *(pin->pin);
+}
 
 #ifdef __cplusplus
 }

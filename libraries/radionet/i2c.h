@@ -85,7 +85,6 @@ typedef void (*flash_iter)(const FlashIO* io, void* obj, uint16_t block, uint16_
 
 void flash_block(const FlashIO* io, void* obj, uint32_t addr, uint16_t bytes, uint8_t* data, flash_iter fn);
 
-uint16_t flash_save(const FlashIO* io, uint32_t addr, uint16_t bytes, uint8_t* data);
 uint16_t flash_read(const FlashIO* io, uint32_t addr, uint16_t bytes, uint8_t* data);
 
 #ifdef __cplusplus
