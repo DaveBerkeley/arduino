@@ -150,31 +150,14 @@ static void debug(const char* text)
      *  I2C Interface.
      */
 
-#define TRIGGER
-
 static PinIo d4 = PinIoD(4);
 static PinIo a0 = PinIoC(0);
-
-#if defined(TRIGGER)
-static PinIo d6 = PinIoD(6);
-
-static void trig()
-{
-    // trigger pulse for logic analyser
-    pin_mode(& d6, true);
-    pin_set(& d6, false);
-    pin_set(& d6, true);
-}
-#endif
 
 static I2C i2c = {
     & d4,   //  SDA
     & a0,   //  SCL
     0x50 << 1,
     0, // i2c_delay,
-#if defined(TRIGGER)
-    & trig,
-#endif
 };
 
 static FlashIO io = {
