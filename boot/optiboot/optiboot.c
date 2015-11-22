@@ -498,6 +498,7 @@ void check_i2c_flash(I2C* i2c)
         bytes -= size;
         addr += size;
         wr_addr += size;
+        watchdogReset();
     }
 
     //  Erase the BOOTDATA record in the i2c flash
