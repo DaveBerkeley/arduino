@@ -505,7 +505,9 @@ void check_i2c_flash(I2C* i2c)
     uint8_t erase = '\0';
     i2c_save(i2c, 0, 0, & erase, sizeof(erase));
 
-    // TODO : reboot ?
+    // reboot when watchdog expires
+    while (true)
+        ;
 }
 
 /* main program starts here */
@@ -555,6 +557,9 @@ int main(void) {
 
           pin_init(& sda, & DDRD, & PORTD, & PIND, 4);
           pin_init(& scl, & DDRC, & PORTC, & PINC, 0);
+
+          // Set up watchdog to trigger after ...
+          watchdogConfig(WATCHDOG_2S);
 
           check_i2c_flash(& i2c);
 
@@ -749,7 +754,8 @@ int main(void) {
     }
     else if (ch == STK_LEAVE_PROGMODE) { /* 'Q' */
       // Adaboot no-wait mod
-      watchdogConfig(WATCHDOG_16MS);
+      //watchdogConfig(WATCHDOG_16MS);
+      watchdogConfig(WATCHDOG_1S);
       verifySpace();
     }
     else {
