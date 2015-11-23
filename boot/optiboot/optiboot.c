@@ -548,7 +548,7 @@ int main(void) {
   ch = MCUCSR;
   MCUCSR = 0;
 #endif
-  if (ch & (_BV(WDRF) | _BV(BORF) | _BV(PORF)))
+  if (!(ch & _BV(EXTRF)))
       appStart(ch);
 
   PinIo sda;
