@@ -334,7 +334,8 @@ static void showHelp () {
 
 static void handleInput (char c) {
     if ('0' <= c && c <= '9') {
-        value = 10 * value + c - '0';
+        value *= 10;
+        value += c - '0';
         return;
     }
 
@@ -370,7 +371,6 @@ static void handleInput (char c) {
         switch (c) {
 
         case 'i': // set node id
-            //value = 12;
             config.nodeId = (config.nodeId & 0xE0) + (value & 0x1F);
             saveConfig();
             break;
