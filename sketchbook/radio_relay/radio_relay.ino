@@ -238,9 +238,13 @@ public:
     char buff[32];
     snprintf(buff, sizeof(buff), "%ld msg(%d,%X)\r\n", millis(), a, f);
     debug(buff);
- 
-    if (flash_req_handler(& io, msg))
+
+    uint8_t* payload = (uint8_t*) msg->payload(); 
+    uint8_t cmd = 0;
+    if (msg->extract(Message::FLASH, & cmd, sizeof(cmd))) {
+        flash_req_handler(& io, cmd, payload);
         return;
+    }
 
     bool r;
     if (msg->extract(PRESENT_STATE, & r, sizeof(r)))

@@ -27,9 +27,7 @@ bool flash_init(FlashIO* io,
         void (*debug_fn)(const char* text), 
         void (*send_fn)(const void* data, int length)=0);
 
-class Message;
-
-bool flash_req_handler(FlashIO* io, Message* msg);
+void flash_req_handler(FlashIO* io, uint8_t cmd, uint8_t* msg);
 
 uint16_t flash_save(const FlashIO* io, uint32_t addr, uint16_t bytes, uint8_t* data);
 

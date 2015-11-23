@@ -29,6 +29,7 @@
 
 #include "flash.h"
 #include "radionet.h"
+#include "radioutils.h"
 
 static void (*flash_send_fn)(const void* data, int length) = 0;
 
@@ -469,16 +470,8 @@ static void flash_write(FlashIO* io, FlashWrite* fc)
      *  Flash Message handler.
      */
 
-bool flash_req_handler(FlashIO* io, Message* msg)
+void flash_req_handler(FlashIO* io, uint8_t cmd, uint8_t* payload)
 {
-    uint8_t* payload = (uint8_t*) msg->payload();
-
-    //  If msg is not a flash request, handle it elsewhere
-    uint8_t cmd = 0;
-    if (!msg->extract(Message::FLASH, & cmd, sizeof(cmd))) {
-        return false;
-    }
-
     switch (cmd) {
         case FLASH_INFO_REQ   : {
             flash_info_req(io, (FlashInfoReq*) payload);
@@ -492,9 +485,7 @@ bool flash_req_handler(FlashIO* io, Message* msg)
 #if defined(ALLOW_VERBOSE)
             debug("flash_reboot()\r\n");
 #endif // ALLOW_VERBOSE
-            wdt_enable(WDTO_15MS);
-            noInterrupts();
-            while (true) ;
+            reboot();
             break;
         }
         case FLASH_WRITE : {
@@ -547,8 +538,6 @@ bool flash_req_handler(FlashIO* io, Message* msg)
 #endif // ALLOW_VERBOSE
         }
     }
-
-    return true;
 }
 
 // FIN

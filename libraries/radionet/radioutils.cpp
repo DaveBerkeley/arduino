@@ -1,4 +1,6 @@
 
+#include <avr/wdt.h>
+
 #include <JeeLib.h>
 
 #include "radioutils.h"
@@ -25,6 +27,20 @@ long read_vcc() {
   result = 1126400L / result; // Back-calculate AVcc in mV
   ADMUX = mux; // restore mux setting
   return result;
+}
+
+    /*
+     *  Force a reboot that looks like an external reset
+     */
+
+void reboot()
+{
+    wdt_enable(WDTO_15MS);
+    noInterrupts();
+    // Set the "external reset" flag
+    // so the bootloader runs.
+    while (true) 
+        MCUSR |= _BV(EXTRF);
 }
 
 //  FIN
