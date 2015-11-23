@@ -30,7 +30,6 @@ typedef struct {
     PinIo*      sda;        //  SDA pin
     PinIo*      scl;        //  SCL pin
     uint8_t     addr;       //  device address
-    void (*delay)();        //  optional scl delay fn
 
     //  Used internally
     int16_t     retries;    //  Polled mode retries

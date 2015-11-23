@@ -47,10 +47,10 @@ static bool i2c_get(I2C* i2c)
     return pin_get(i2c->sda);
 }
 
-static void i2c_scl(I2C* i2c, bool state)
+// don't make it static, to avoid inlining.
+// required to keep it small for the bootloader.
+void i2c_scl(I2C* i2c, bool state)
 {
-    if (i2c->delay)
-        i2c->delay();
     pin_set(i2c->scl, state);
 }
 

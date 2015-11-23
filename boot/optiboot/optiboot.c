@@ -548,17 +548,19 @@ int main(void) {
   ch = MCUCSR;
   MCUCSR = 0;
 #endif
-  if (!(ch & _BV(EXTRF)))
-      appStart(ch);
+  if (!(ch & _BV(EXTRF))) { // external reset
+      if (ch & _BV(WDRF)) { // watchdog reset
+          PinIo sda, scl;
+          I2C i2c = { & sda, & scl, 0x50 << 1, };
 
-  PinIo sda;
-  PinIo scl;
-  I2C i2c = { & sda, & scl, 0x50 << 1, };
+          pin_init(& sda, & DDRD, & PORTD, & PIND, 4);
+          pin_init(& scl, & DDRC, & PORTC, & PINC, 0);
 
-  pin_init(& sda, & DDRD, & PORTD, & PIND, 4);
-  pin_init(& scl, & DDRC, & PORTC, & PINC, 0);
+          check_i2c_flash(& i2c);
 
-  check_i2c_flash(& i2c);
+          appStart(ch);
+      }
+  }
 
 #if LED_START_FLASHES > 0
   // Set up Timer 1 for timeout counter
