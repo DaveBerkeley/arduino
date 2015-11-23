@@ -83,7 +83,13 @@ static void decode_command(uint8_t* data, int length)
     Message msg(data);
 
     set_led(RD_LED, & rd_led);
-    flash_req_handler(& flash, & msg);
+
+    uint8_t* payload = (uint8_t*) msg.payload(); 
+    uint8_t cmd = 0;
+    if (msg.extract(Message::FLASH, & cmd, sizeof(cmd))) {
+        flash_req_handler(& flash, cmd, payload);
+        return;
+    }
 }
 
 void setup()
