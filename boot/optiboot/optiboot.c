@@ -754,8 +754,7 @@ int main(void) {
     }
     else if (ch == STK_LEAVE_PROGMODE) { /* 'Q' */
       // Adaboot no-wait mod
-      //watchdogConfig(WATCHDOG_16MS);
-      watchdogConfig(WATCHDOG_1S);
+      watchdogConfig(WATCHDOG_16MS);
       verifySpace();
     }
     else {
