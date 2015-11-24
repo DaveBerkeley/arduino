@@ -146,6 +146,16 @@ static void debug(const char* text)
   Serial.print(text);
 }
 
+void send_fn(const void* data, int length)
+{
+    Message msg(make_mid(), GATEWAY_ID);
+
+    msg.append(Message::FLASH, data, length);
+
+    send_message(& msg);
+}
+
+
     /*
      *  I2C Interface.
      */
@@ -202,7 +212,7 @@ public:
     init_leds();
     set_relay(0);
 
-    flash_init(& io, ::debug);
+    flash_init(& io, ::debug, send_fn);
   }
 
   virtual const char* banner()

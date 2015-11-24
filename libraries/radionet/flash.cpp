@@ -17,18 +17,11 @@
  USA
 */
 
-#if defined(ARDUINO) && ARDUINO >= 100
-  #include "Arduino.h"
-#else
-  #include "WProgram.h"
-  #include <pins_arduino.h>
-#endif
-
 #include <util/crc16.h>
 #include <avr/wdt.h>
+#include <stdio.h>
 
 #include "flash.h"
-#include "radionet.h"
 #include "radioutils.h"
 
 static void (*flash_send_fn)(const void* data, int length) = 0;
@@ -43,6 +36,8 @@ static void debug(const char* text)
     if (debug_fn)
         debug_fn(text);
 }
+#else
+#define debug(x)
 #endif // ALLOW_VERBOSE
 
     /*
@@ -77,7 +72,7 @@ typedef struct {
     uint16_t    packet_size;
 }   FlashInfo;
 
-#define MAX_DATA (52 + sizeof(FlashInfo))
+#define MAX_DATA (54 + sizeof(FlashInfo))
 
 typedef struct {
     uint8_t     cmd;
@@ -251,29 +246,20 @@ static uint16_t get_crc(const FlashIO* io, uint32_t addr, uint16_t bytes) {
 }
 
     /*
-     *  Send a FLASH message to the Gateway (if node)
-     *  or to host (if gateway).
+     *  Send a FLASH message using provided callback.
      */
 
 void send_flash_message(const void* data, int length)
 {
-    Message msg(make_mid(), GATEWAY_ID);
-
-    msg.append(Message::FLASH, data, length);
-
     if (flash_send_fn) {
-        flash_send_fn(msg.data(), msg.size());
+        flash_send_fn(data, length);
     } else {
-        send_message(& msg);
+        debug("no send_fn()\r\n");
     }
 }
 
     /*
      *  Handlers for individual Flash messages.
-     */
-
-    /*
-     *
      */
 
 static void flash_info_req(FlashIO* io, FlashInfoReq* fc)
@@ -370,6 +356,8 @@ static void flash_crc_req(FlashIO* io, FlashCrcReq* fc)
     /*
      *
      */
+
+#define min(a, b) (((a) < (b)) ? (a) : (b))
 
 static void flash_read_req(FlashIO* io, FlashReadReq* fc)
 {
