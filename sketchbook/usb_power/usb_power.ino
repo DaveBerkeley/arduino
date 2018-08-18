@@ -14,12 +14,10 @@ class Pin
 {
   int pin;
   int timer;
-  int start;
 public:
   Pin()
   : pin(-1),
-    timer(0),
-    start(11)
+    timer(0)
   {
   }
   
@@ -55,39 +53,13 @@ public:
     }
   }
   
-  bool starting()
+  int get()
   {
-    if (!start)
-      return false;
-      
-    start -= 1;
-    
-    if (start == 10)
-    {
-      on();
-    }
-      
-    if (start == 0)
-    {
-      off();
-    }
-      
-    return true;
+    return timer;
   }
 };
 
 static Pin pins[PINS];
-
-static void set_all(bool on)
-{
-  for (int i = 0; i < PINS; i++)
-  {
-    if (on)
-      pins[i].on();
-    else
-      pins[i].off();
-  }
-}
 
 static void poll()
 {
@@ -95,6 +67,107 @@ static void poll()
   {
     pins[i].poll();
   }
+}
+
+  /*
+  *
+  */
+  
+static int get_ports(char *buff)
+{
+  int bits = 0;
+  int port = 0;
+
+  for (; *buff; buff++)
+  {  
+    const char c = *buff;
+    if ((c >= '0') && (c <= '9'))
+    {
+      int p = c - '0';
+      bits |= 1 << p;
+    }
+    
+    port += 1;
+  }
+  
+  return bits;
+}
+  
+static void process_line(char *buff)
+{
+  const int bits = get_ports(buff+1);
+
+  switch (buff[0])
+  {
+    case '?' :
+    {
+      //  show status
+      for (int i = 0; i < PINS; i++)
+      {
+          Serial.print(pins[i].get() ? 'X' : '-');
+      }
+      Serial.print("\r\n");
+      return;
+    }
+    case 'S' : // Set
+    {
+      for (int i = 0; i < PINS; i++)
+      {
+        if ((1 << i) & bits)
+        {
+          pins[i].on();
+        }
+      }
+      break;
+    }
+    case 'R' : // Reset
+    {
+      for (int i = 0; i < PINS; i++)
+      {
+        if ((1 << i) & bits)
+        {
+          pins[i].off();
+        }
+      }
+      break;
+    }
+    default :
+    {
+      Serial.print("error\r\n");
+      return;
+    }
+  }
+  Serial.print("okay\r\n");
+}
+  
+static bool command()
+{
+  if (!Serial.available())
+    return false;
+
+  static char buff[32];
+  static int idx = 0; 
+
+  int c = Serial.read();
+  
+  buff[idx] = c;
+  idx += 1;
+  
+  if (idx >= sizeof(buff))
+  {
+    idx = 0;
+    return false;
+  }
+
+  buff[idx] = '\0';
+  
+  if (c == '\n')
+  {
+    idx = 0;
+    process_line(buff);
+  }
+  
+  return true;
 }
 
   /*
@@ -121,21 +194,8 @@ void loop()
 
   state = !state;
 
-  static int count = 0;
-  Serial.print(count++);
-  Serial.print(" hello\r\n");
-
-  static int start = 0;
-
-  if (start != -1)
-  {
-    if (!pins[start].starting())
-    {
-      start += 1;
-      if (start >= PINS)
-        start = -1;
-    }
-  }
+  while (command())
+    ;
 
   poll();
   delay(100); // ms 
