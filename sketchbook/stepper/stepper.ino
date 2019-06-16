@@ -111,6 +111,7 @@ void loop() {
 
     if (stepper.ready())
     {
+        delay(random(1000));
         int p = random(4000);
         stepper.seek(p);
     }
