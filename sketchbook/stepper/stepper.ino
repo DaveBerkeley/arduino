@@ -15,10 +15,11 @@ class Stepper
     int steps;
     int count;
     int target;
+    int period;
 
 public:
-    Stepper(int cycle, int p1, int p2, int p3, int p4)
-    : state(0), steps(cycle), count(0), target(0)
+    Stepper(int cycle, int p1, int p2, int p3, int p4, int time=1000)
+    : state(0), steps(cycle), count(0), target(0), period(time)
     {
         pins[0] = p1;
         pins[1] = p2;
@@ -78,11 +79,27 @@ public:
 
     void poll()
     {
-        if (target == count)
+        const int delta = count - target;
+
+        if (delta == 0)
             return;
 
-        step(count < target);
-        delay(1);
+        step(delta < 0);
+
+        const int move = abs(delta);
+
+        if (move < 5)
+        {
+            delayMicroseconds(5 * period);
+        }
+        else if (move < 20)
+        {
+            delayMicroseconds(2 * period);
+        }
+        else
+        {
+            delayMicroseconds(1 * period);
+        }
     }
 };
 
@@ -100,7 +117,7 @@ const int Stepper::cycle[STATES][PINS] = {
     *
     */
 
-static Stepper stepper(4000, 8, 9, 10, 11);
+static Stepper stepper(4000, 8, 9, 10, 11, 1000);
 
 void setup () {
     //Serial.begin(57600);
