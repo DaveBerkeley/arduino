@@ -77,6 +77,17 @@ public:
         return target == count;
     }
 
+    void zero()
+    {
+        target = 0;
+        count = 0;
+    }
+
+    void set_steps(int s)
+    {
+        steps = s;
+    }
+
     void poll()
     {
         const int delta = count - target;
@@ -113,24 +124,165 @@ const int Stepper::cycle[STATES][PINS] = {
     { 1, 0, 0, 1 },
 };
 
+static Stepper stepper(4000, 8, 9, 10, 11, 1000);
+
     /*
     *
     */
 
-static Stepper stepper(4000, 8, 9, 10, 11, 1000);
+class CLI
+{
+    char command;
+    int value;
+    bool get_value;
+    int sign;
+    bool get_sign;
+
+    void reset()
+    {
+        //Serial.print("reset\r\n");
+        command = 0;
+        value = 0;
+        get_value = 0;
+        sign = 1;
+        get_sign = 0;
+    }
+
+    void run()
+    {
+        switch (command)
+        {
+            case 'G' :
+                stepper.seek(value);
+                break;
+            case 'S' :
+                stepper.set_steps(value);
+                break;
+            case 'Z' :
+                stepper.zero();
+                break;
+            case 'R' :
+                const int delta = value * sign;
+                stepper.seek(stepper.position() + delta);
+                break;
+        }
+    }
+
+public:
+    CLI()
+    {
+        reset();
+    }
+
+    void process(char c)
+    {
+        if ((c == '\r') || (c == '\n'))
+        {
+            if (command)
+            {
+                run();
+            }
+            else 
+            {
+                reset();
+            }
+            return;
+        }
+
+        if ((c >= '0') && (c <= '9'))
+        {
+            // numeric
+            if (get_value)
+            {
+                value *= 10;
+                value += c - '0';
+            }
+            else
+            {
+                reset();
+            }
+            return;
+        }
+
+        if ((c == '+') || (c == '-'))
+        {
+            if (get_sign)
+            {
+                sign = (c = '+') ? 1 : -1;
+            }
+            else
+            {
+                reset();
+            }
+            return;
+        }
+
+        switch (c)
+        {
+            case 'Z' : // zero
+                command = c;
+                break;
+            case 'R' : // relative
+                get_sign = 1;
+                // fall through
+            case 'S' : // steps
+            case 'G' : // goto
+                command = c;
+                get_value = true;
+                value = 0;
+                break;
+
+            default:
+                reset();
+                return;
+        }
+        return;
+    }
+};
+
+    /*
+    *
+    */
+
+static int sensor_0 = 6, sensor_1 = 7;
+static CLI cli;
 
 void setup () {
-    //Serial.begin(57600);
+    Serial.begin(9600);
+    pinMode(sensor_0, INPUT);
+    pinMode(sensor_1, INPUT);
 }
 
 void loop() {
+    static unsigned long elapsed = 0;
+    const unsigned long now = millis();
+
+    if (now < elapsed)
+    {
+        //  wrap around
+        elapsed = 0;
+    }
+
+    const unsigned long tdiff = now - elapsed;
+
+    if (tdiff >= 500)
+    {
+        //  reporting interval
+        elapsed = now;
+#if 1
+        Serial.print(stepper.ready() ? 'R' : 'X');
+        Serial.print(digitalRead(sensor_0) ? 'H' : 'L');
+        Serial.print(digitalRead(sensor_1) ? 'H' : 'L');
+        Serial.print(stepper.position());
+        Serial.print("\r\n");
+#endif
+    }
+
     stepper.poll();
 
-    if (stepper.ready())
+    if (Serial.available())
     {
-        delay(random(1000));
-        int p = random(4000);
-        stepper.seek(p);
+        cli.process(Serial.read());
     }
 }
 
