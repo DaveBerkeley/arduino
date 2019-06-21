@@ -31,6 +31,8 @@ public:
             pinMode(pins[i], OUTPUT);
             digitalWrite(pins[i], 0);
         }
+
+        set_state(0);
     }
 
     void set_state(int s)
