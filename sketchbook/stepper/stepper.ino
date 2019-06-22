@@ -8,7 +8,7 @@ class Stepper
     #define PINS 4
     int pins[PINS];
 
-    #define STATES 7
+    #define STATES 8
     const static int cycle[STATES][PINS];
 
     int state;
@@ -118,12 +118,13 @@ public:
 
 const int Stepper::cycle[STATES][PINS] = {
     { 1, 0, 0, 0 },
-    { 1, 1, 0, 0 },
-    { 0, 1, 0, 0 },
-    { 0, 1, 1, 0 },
-    { 0, 0, 1, 0 },
-    { 0, 0, 1, 1 },
     { 1, 0, 0, 1 },
+    { 0, 0, 0, 1 },
+    { 0, 0, 1, 1 },
+    { 0, 0, 1, 0 },
+    { 0, 1, 1, 0 },
+    { 0, 1, 0, 0 },
+    { 1, 1, 0, 0 },
 };
 
 static Stepper stepper(4000, 8, 9, 10, 11, 1000);
@@ -142,7 +143,6 @@ class CLI
 
     void reset()
     {
-        //Serial.print("reset\r\n");
         command = 0;
         value = 0;
         get_value = 0;
@@ -246,6 +246,58 @@ public:
     *
     */
 
+static void report(Stepper stepper, int sensor_0, int sensor_1)
+{
+    static unsigned long elapsed = 0;
+    const unsigned long now = millis();
+
+    static char last[16];
+    char buff[16];
+
+    snprintf(buff, sizeof(buff), "%c%c%c%d\r\n", 
+        stepper.ready() ? 'R' : 'X',
+        digitalRead(sensor_0) ? 'H' : 'L',
+        digitalRead(sensor_1) ? 'H' : 'L',
+        stepper.position());
+
+    int diff = strcmp(last, buff);
+    bool ready = buff[0] == 'R';
+
+    bool do_report = false;
+    if (diff && ready)
+    {
+        // we've become Ready, always report
+        do_report = true;
+    }
+
+    if (now < elapsed)
+    {
+        //  wrap around
+        elapsed = 0;
+    }
+
+    const unsigned long tdiff = now - elapsed;
+    // higher report rate during moves
+    const unsigned int period = diff ? 100 : 1000;
+
+    if (tdiff >= period)
+    {
+        //  reporting interval
+        do_report = true;
+    }
+
+    if (do_report)
+    {
+        elapsed = now;
+        Serial.print(buff);
+        strncpy(last, buff, sizeof(last));
+    }
+}
+
+    /*
+    *
+    */
+
 static int sensor_0 = 6, sensor_1 = 7;
 static CLI cli;
 
@@ -256,29 +308,7 @@ void setup () {
 }
 
 void loop() {
-    static unsigned long elapsed = 0;
-    const unsigned long now = millis();
-
-    if (now < elapsed)
-    {
-        //  wrap around
-        elapsed = 0;
-    }
-
-    const unsigned long tdiff = now - elapsed;
-
-    if (tdiff >= 500)
-    {
-        //  reporting interval
-        elapsed = now;
-#if 1
-        Serial.print(stepper.ready() ? 'R' : 'X');
-        Serial.print(digitalRead(sensor_0) ? 'H' : 'L');
-        Serial.print(digitalRead(sensor_1) ? 'H' : 'L');
-        Serial.print(stepper.position());
-        Serial.print("\r\n");
-#endif
-    }
+    report(stepper, sensor_0, sensor_1);
 
     stepper.poll();
 
