@@ -138,16 +138,12 @@ class CLI
     char command;
     int value;
     bool get_value;
-    int sign;
-    bool get_sign;
 
     void reset()
     {
         command = 0;
         value = 0;
         get_value = 0;
-        sign = 1;
-        get_sign = 0;
     }
 
     void run()
@@ -163,9 +159,11 @@ class CLI
             case 'Z' :
                 stepper.zero();
                 break;
-            case 'R' :
-                const int delta = value * sign;
-                stepper.seek(stepper.position() + delta);
+            case '+' :
+                stepper.seek(stepper.position() + value);
+                break;
+            case '-' :
+                stepper.seek(stepper.position() - value);
                 break;
         }
     }
@@ -206,27 +204,13 @@ public:
             return;
         }
 
-        if ((c == '+') || (c == '-'))
-        {
-            if (get_sign)
-            {
-                sign = (c = '+') ? 1 : -1;
-            }
-            else
-            {
-                reset();
-            }
-            return;
-        }
-
         switch (c)
         {
             case 'Z' : // zero
                 command = c;
                 break;
-            case 'R' : // relative
-                get_sign = 1;
-                // fall through
+            case '+' : // relative
+            case '-' : // relative
             case 'S' : // steps
             case 'G' : // goto
                 command = c;
