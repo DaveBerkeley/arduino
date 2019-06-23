@@ -17,11 +17,12 @@ class Stepper
     int target;
     int period;
 
+    void set_state(int s);
+    void step(bool up);
+
 public:
     Stepper(int cycle, int p1, int p2, int p3, int p4, int time=1000);
 
-    void set_state(int s);
-    void step(bool up);
     int position();
     void seek(int t);
     int get_target();

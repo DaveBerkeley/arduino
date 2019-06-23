@@ -7,6 +7,21 @@
   *
   */
 
+const int Stepper::cycle[STATES][PINS] = {
+    { 1, 0, 0, 0 },
+    { 1, 0, 0, 1 },
+    { 0, 0, 0, 1 },
+    { 0, 0, 1, 1 },
+    { 0, 0, 1, 0 },
+    { 0, 1, 1, 0 },
+    { 0, 1, 0, 0 },
+    { 1, 1, 0, 0 },
+};
+
+  /*
+  *
+  */
+
 Stepper::Stepper(int cycle, int p1, int p2, int p3, int p4, int time)
 : state(0), steps(cycle), count(0), target(0), period(time)
 {
@@ -18,7 +33,6 @@ Stepper::Stepper(int cycle, int p1, int p2, int p3, int p4, int time)
     for (int i = 0; i < PINS; i++)
     {
         pinMode(pins[i], OUTPUT);
-        digitalWrite(pins[i], 0);
     }
 
     set_state(0);
@@ -60,6 +74,16 @@ int Stepper::position()
 
 void Stepper::seek(int t)
 {
+    // clip to valid limits
+    if (t < 0)
+    {
+        t = 0;
+    }
+    if (t >= steps)
+    {
+        t = steps - 1;
+    }
+
     target = t;
 }
 
@@ -109,16 +133,5 @@ void Stepper::poll()
         delayMicroseconds(1 * period);
     }
 }
-
-const int Stepper::cycle[STATES][PINS] = {
-    { 1, 0, 0, 0 },
-    { 1, 0, 0, 1 },
-    { 0, 0, 0, 1 },
-    { 0, 0, 1, 1 },
-    { 0, 0, 1, 0 },
-    { 0, 1, 1, 0 },
-    { 0, 1, 0, 0 },
-    { 1, 1, 0, 0 },
-};
 
 // FIN

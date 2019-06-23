@@ -6,6 +6,7 @@
 #include <Arduino.h>
 
 #include "../cli.h"
+#include "../motor.h"
 
 typedef struct {
     char cmd;
@@ -90,6 +91,88 @@ TEST(Cli, Cli)
     EXPECT_EQ(arg.cmd, 'A');
     EXPECT_EQ(arg.value, 0);
     EXPECT_EQ(arg.fn, on_a);
+
+    // check <backspace> deletes (reset)
+    // actually, any unknown cahr will reset the line
+    memset(& arg, 0, sizeof(arg));
+    cli.process("A\b\r\n");
+    EXPECT_EQ(arg.cmd, '\0');
+    EXPECT_EQ(arg.value, 0);
+    EXPECT_EQ(arg.fn, (void*)0);
+}
+
+    /*
+     *
+     */
+
+static void seek_test(Stepper *stepper, int seek)
+{
+    stepper->seek(seek);
+    const int start = stepper->position();
+    int step = 1;
+    if (seek < start)
+    {
+        step = -1;
+    }
+
+    for (int i = start; i != seek; i += step)
+    {
+        EXPECT_EQ(stepper->position(), i);
+        EXPECT_EQ(stepper->ready(), false);
+        // step to the next position
+        stepper->poll();
+    }
+
+    // should now be in position
+    EXPECT_EQ(stepper->position(), seek);
+    EXPECT_EQ(stepper->ready(), true);
+}
+
+TEST(Motor, X)
+{
+    int cycle = 5000;
+    Stepper stepper(cycle, 1, 2, 3, 4);
+
+    // seek test
+    EXPECT_EQ(stepper.position(), 0);
+    seek_test(& stepper, 100);
+    EXPECT_EQ(stepper.get_target(), 100);
+    seek_test(& stepper, 0);
+    seek_test(& stepper, 4999);
+    seek_test(& stepper, 50);
+    seek_test(& stepper, 1050);
+    EXPECT_EQ(stepper.get_target(), 1050);
+
+    // zero test
+    stepper.zero();
+    EXPECT_EQ(stepper.position(), 0);
+    seek_test(& stepper, 100);
+
+    // seek should clip at limits (<0)
+    seek_test(& stepper, 100);
+    stepper.seek(-1);
+    while (!stepper.ready())
+    {
+        stepper.poll();
+    }
+    EXPECT_EQ(stepper.position(), 0);
+
+    // seek should clip at limits (>= cycle)
+    stepper.seek(cycle + 100);
+    while (!stepper.ready())
+    {
+        stepper.poll();
+    }
+    EXPECT_EQ(stepper.position(), cycle - 1);
+
+    // seek should clip at limits (>= cycle)
+    stepper.seek(cycle);
+    while (!stepper.ready())
+    {
+        printf("%d\n", stepper.position());
+        stepper.poll();
+    }
+    EXPECT_EQ(stepper.position(), cycle - 1);
 }
 
 //  FIN
