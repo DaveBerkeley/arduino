@@ -9,7 +9,6 @@ void CLI::reset()
 {
     command = 0;
     value = 0;
-    get_value = 0;
 }
 
 void CLI::run()
@@ -52,15 +51,8 @@ void CLI::process(char c)
     if (command && ((c >= '0') && (c <= '9')))
     {
         // numeric
-        if (get_value)
-        {
-            value *= 10;
-            value += c - '0';
-        }
-        else
-        {
-            reset();
-        }
+        value *= 10;
+        value += c - '0';
         return;
     }
 
@@ -70,7 +62,6 @@ void CLI::process(char c)
         if (action->cmd == c)
         {
             command = c;
-            get_value = true;
             value = 0;
             return;
         }

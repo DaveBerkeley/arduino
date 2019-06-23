@@ -15,7 +15,6 @@ class CLI
 {
     char command;
     int value;
-    bool get_value;
     Action *actions;
 
     void reset();
