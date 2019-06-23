@@ -24,6 +24,7 @@ void CLI::run()
 }
 
 CLI::CLI()
+: actions(0)
 {
     reset();
 }
