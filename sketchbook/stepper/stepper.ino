@@ -41,7 +41,7 @@ static void on_plus(char cmd, int value, void *arg)
 static void on_minus(char cmd, int value, void *arg)
 {
     Stepper *s = (Stepper*) arg;
-    s->seek(s->get_target() + value);
+    s->seek(s->get_target() - value);
 }
 
     /*
