@@ -3,6 +3,7 @@
 import time
 import threading
 import serial
+import random
 
 def log(*args):
     print time.strftime("%y/%m/%d %H:%M:%S :"), 
@@ -17,13 +18,35 @@ def command(text):
 
 dead = False;
 
-def listen(s):
-    while not dead:
-        t = s.read(1024)
-        if not t:
-            continue
-        t = t.strip()
-        log(t)
+class Motor:
+
+    def __init__(self):
+        self.rsp = "XXX0"
+
+    def listen(self, s):
+        text = ""
+        while not dead:
+            t = s.read()
+            if not t:
+                continue
+            text += t
+            if not t in "\r\n":
+                continue
+            text, rsp = "", text.strip()
+            if not rsp:
+                continue
+            log(rsp)
+            self.rsp = rsp
+
+    def ready(self):
+        return self.rsp[0] == "R"
+
+    def posn(self):
+        return int(self.rsp[3:])
+
+    def wait_for(self, p):
+        while p != self.posn():
+            time.sleep(0.01)
 
 #
 #
@@ -32,10 +55,12 @@ dev = "/dev/arduino"
 
 s = serial.Serial(dev, 9600, timeout=0.1)
 
-thread = threading.Thread(target=listen, args=(s,))
+motor = Motor()
+
+thread = threading.Thread(target=motor.listen, args=(s,))
 thread.start()
 
-end_stop = 3800
+end_stop = 4100
 
 # flush the stepper's command buffer
 time.sleep(1);
@@ -46,11 +71,14 @@ time.sleep(1);
 
 try:
     while True:
-        for i in range(0, end_stop, 100):
-            command("G%d" % i);
-            time.sleep(0.5);
+        for i in range(0, end_stop, 1): # 200):
+            j = random.randint(0, end_stop)
+            command("G%d" % j);
+            motor.wait_for(j)
         command("G0")
-        time.sleep(5)
+        motor.wait_for(0)
+        time.sleep(0.2)
+
 except KeyboardInterrupt:
     pass
 
