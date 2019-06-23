@@ -1,4 +1,6 @@
  
+#include <stdlib.h>
+
 #include <Arduino.h>
 
 // DHT22 code Based on AdaFruit library ...
@@ -18,6 +20,105 @@
 
 static NewPing sonar(TRIGGER_PIN, ECHO_PIN, MAX_DISTANCE);
 static DHT dht(HUMIDITY_PIN, DHT_TYPE);
+
+// TODO
+static int pump = 0;
+static int fan = 50;
+
+  /*
+  *
+  */
+
+class Command
+{
+  enum cmd { UNKNOWN, FAN, PUMP, };
+  
+  enum cmd cmd;
+  int value;
+  char buff[16];
+  int idx;
+
+public:
+  Command()
+  : idx(0)
+  {
+  }
+
+  bool parse(const char *line)
+  {
+    cmd = UNKNOWN;
+    switch (*line++)
+    {
+      case 'p' :
+      {
+        //  pump
+        cmd = PUMP;
+        value = atoi(line);
+        break;
+      }
+      case 'f' :
+      {
+        //  fan
+        cmd = FAN;
+        value = atoi(line);
+        break;
+      }
+      default :
+      {
+        // error
+        return false;
+      }
+    }
+    
+    return true;
+  }
+  
+  bool command()
+  {
+    if (!Serial.available())
+    {
+      return false;
+    }  
+    
+    const int c = Serial.read();
+    buff[idx] = c;
+    idx += 1;
+    if (idx >= sizeof(buff))
+    {
+      idx = 0;
+      return true;
+    }
+
+    buff[idx] = '\0';
+    
+    if (c != '\n')
+      return true;
+
+    idx = 0;
+    
+    switch (buff[0])
+    {
+      case 'f' :
+      {
+        int value = atoi(& buff[1]);
+        // TODO : validate etc.
+        fan = value;
+        break;
+      }
+      case 'p' :
+      {
+        int value = atoi(& buff[1]);
+        // TODO : validate etc.
+        pump = value;
+        break;
+      }
+      default:
+        return false;
+    }
+    
+    return true;
+  }
+};
 
   /*
   *
@@ -40,14 +141,15 @@ void loop()
   digitalWrite(LED, state ? HIGH : LOW);
 
   state = !state;
+  
+  static Command cmd;
+
+  while (cmd.command())
+    ;
 
   const int distance = sonar.ping_cm();
   const float temp = dht.readTemperature();
   const float humidity = dht.readHumidity();
-  
-  // TODO
-  const int pump = 0;
-  const int fan = 50;
 
   Serial.print("d=");
   Serial.print(distance);
