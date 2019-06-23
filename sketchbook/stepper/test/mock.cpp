@@ -1,8 +1,6 @@
 
 #include <Arduino.h>
 
-#define UNUSED(x) ((x) = (x))
-
 void pinMode(int pin, int mode)
 {
     UNUSED(pin);

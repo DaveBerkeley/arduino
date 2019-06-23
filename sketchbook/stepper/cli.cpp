@@ -72,4 +72,12 @@ void CLI::process(char c)
     reset();
 }
 
+void CLI::process(const char *line)
+{
+    while (*line)
+    {
+        process(*line++);
+    }
+}
+
 // FIN

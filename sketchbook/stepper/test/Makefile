@@ -1,7 +1,7 @@
 
 CC = g++
 LL = g++
-CFLAGS = -Wall -Wextra -g -I.
+CFLAGS = -Wall -Wextra -Werror -g -I.
 LDFLAGS = -pthread 
 
 # Link with google test

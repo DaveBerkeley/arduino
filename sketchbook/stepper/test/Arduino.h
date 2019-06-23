@@ -1,6 +1,9 @@
 
 #include <math.h>
 
+#define UNUSED(x) ((x) = (x))
+#define ASSERT(x) assert(x)
+
 void pinMode(int pin, int mode);
 
 enum {

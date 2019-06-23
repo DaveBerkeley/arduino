@@ -25,6 +25,7 @@ public:
 
     void add_action(Action *action);
     void process(char c);
+    void process(const char *line);
 };
 
 // FIN
