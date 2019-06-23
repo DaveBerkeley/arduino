@@ -95,6 +95,7 @@ void Stepper::poll()
 
     const int move = abs(delta);
 
+    // Acceleration / deceleration
     if (move < 5)
     {
         delayMicroseconds(5 * period);

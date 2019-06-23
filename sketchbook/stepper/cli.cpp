@@ -19,7 +19,6 @@ void CLI::run()
         if (action->cmd == command)
         {
             action->fn(command, value, action->arg);
-            reset();
             return;
         }
     }
@@ -38,22 +37,19 @@ void CLI::add_action(Action *action)
 
 void CLI::process(char c)
 {
-    // process any completed command line
+    // process any completed line
     if ((c == '\r') || (c == '\n'))
     {
         if (command)
         {
             run();
         }
-        else 
-        {
-            reset();
-        }
+        reset();
         return;
     }
 
     // handle numeric values
-    if ((c >= '0') && (c <= '9'))
+    if (command && ((c >= '0') && (c <= '9')))
     {
         // numeric
         if (get_value)
