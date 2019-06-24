@@ -3,7 +3,8 @@
 
 #include <gtest/gtest.h>
 
-#include <Arduino.h>
+#include "Arduino.h"
+#include "mock.h"
 
 #include "../cli.h"
 #include "../motor.h"
@@ -12,7 +13,6 @@ typedef struct {
     char cmd;
     int value;
     void (*fn)(char cmd, int value, void *arg);
-    
 }   CliArg;
 
 static void on_a(char cmd, int value, void *arg)
@@ -128,8 +128,14 @@ static void seek_test(Stepper *stepper, int seek)
     EXPECT_EQ(stepper->ready(), true);
 }
 
-TEST(Motor, X)
+    /*
+     *
+     */
+
+TEST(Motor, Seek)
 {
+    mock_setup();
+
     int cycle = 5000;
     Stepper stepper(cycle, 1, 2, 3, 4);
 
@@ -173,6 +179,83 @@ TEST(Motor, X)
         stepper.poll();
     }
     EXPECT_EQ(stepper.position(), cycle - 1);
+
+    mock_teardown();
+}
+
+    /*
+     *  Check the state of the pins
+     *
+     *  They should follow a strict pattern
+     *
+     *  1000
+     *  1001
+     *  0011
+     *  0010
+     *  0110
+     *  0100
+     *  1100
+     *
+     *  repeated
+     */
+
+TEST(Motor, IO)
+{
+    mock_setup();
+
+    int cycle = 5000;
+    Stepper stepper(cycle, 1, 2, 3, 4);
+
+    int pins[4] = { 0, 0, 0, 0 };
+
+    // starts with beginning pin hi
+    pins[0] = 1;
+    EXPECT_TRUE(pins_match(4, 1, pins));
+    EXPECT_EQ(stepper.position(), 0);
+ 
+    // one pin changes state on each step
+    seek_test(& stepper, 1);
+    EXPECT_EQ(stepper.position(), 1);
+    pins[3] = 1;
+    EXPECT_TRUE(pins_match(4, 1, pins));
+
+    seek_test(& stepper, 2);
+    EXPECT_EQ(stepper.position(), 2);
+    pins[0] = 0;
+    EXPECT_TRUE(pins_match(4, 1, pins));
+
+    seek_test(& stepper, 3);
+    EXPECT_EQ(stepper.position(), 3);
+    pins[2] = 1;
+    EXPECT_TRUE(pins_match(4, 1, pins));
+
+    seek_test(& stepper, 4);
+    EXPECT_EQ(stepper.position(), 4);
+    pins[3] = 0;
+    EXPECT_TRUE(pins_match(4, 1, pins));
+
+    seek_test(& stepper, 5);
+    EXPECT_EQ(stepper.position(), 5);
+    pins[1] = 1;
+    EXPECT_TRUE(pins_match(4, 1, pins));
+
+    seek_test(& stepper, 6);
+    EXPECT_EQ(stepper.position(), 6);
+    pins[2] = 0;
+    EXPECT_TRUE(pins_match(4, 1, pins));
+
+    seek_test(& stepper, 7);
+    EXPECT_EQ(stepper.position(), 7);
+    pins[0] = 1;
+    EXPECT_TRUE(pins_match(4, 1, pins));
+
+    // back to the start
+    seek_test(& stepper, 8);
+    EXPECT_EQ(stepper.position(), 8);
+    pins[1] = 0;
+    EXPECT_TRUE(pins_match(4, 1, pins));
+
+    mock_teardown();
 }
 
 //  FIN

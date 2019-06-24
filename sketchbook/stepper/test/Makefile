@@ -26,6 +26,9 @@ XDEPS = $(XSRC:%.cpp=$(XOBJDIR)/%.d)
 MAKEDEPEND  = $(CC) -MM $(CPPFLAGS) -MT $(OBJDIR)/$*.o  -o $(OBJDIR)/$*.d $<
 XMAKEDEPEND = $(CC) -MM $(CPPFLAGS) -MT $(XOBJDIR)/$*.o -o $(XOBJDIR)/$*.d $<
 
+.SECONDARY:
+	echo "x"
+
 all: $(APP) $(DEPS)
 
 clean:
@@ -51,6 +54,6 @@ $(OBJDIR)/%.o : %.c $(OBJDIR)/%.d
 $(XOBJDIR)/%.o : %.cpp $(XOBJDIR)/%.d
 	$(CC) $(CFLAGS) -c -o $@ $<
 
--include $(DEPS) $(DEPS)
+-include $(DEPS) 
 
 # FIN
