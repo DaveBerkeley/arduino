@@ -208,50 +208,43 @@ TEST(Motor, IO)
 
     int pins[4] = { 0, 0, 0, 0 };
 
-    // starts with beginning pin hi
+    EXPECT_EQ(stepper.position(), 0);
+
+    // starts with begining pin hi
     pins[0] = 1;
     EXPECT_TRUE(pins_match(4, 1, pins));
-    EXPECT_EQ(stepper.position(), 0);
  
     // one pin changes state on each step
     seek_test(& stepper, 1);
-    EXPECT_EQ(stepper.position(), 1);
     pins[3] = 1;
     EXPECT_TRUE(pins_match(4, 1, pins));
 
     seek_test(& stepper, 2);
-    EXPECT_EQ(stepper.position(), 2);
     pins[0] = 0;
     EXPECT_TRUE(pins_match(4, 1, pins));
 
     seek_test(& stepper, 3);
-    EXPECT_EQ(stepper.position(), 3);
     pins[2] = 1;
     EXPECT_TRUE(pins_match(4, 1, pins));
 
     seek_test(& stepper, 4);
-    EXPECT_EQ(stepper.position(), 4);
     pins[3] = 0;
     EXPECT_TRUE(pins_match(4, 1, pins));
 
     seek_test(& stepper, 5);
-    EXPECT_EQ(stepper.position(), 5);
     pins[1] = 1;
     EXPECT_TRUE(pins_match(4, 1, pins));
 
     seek_test(& stepper, 6);
-    EXPECT_EQ(stepper.position(), 6);
     pins[2] = 0;
     EXPECT_TRUE(pins_match(4, 1, pins));
 
     seek_test(& stepper, 7);
-    EXPECT_EQ(stepper.position(), 7);
     pins[0] = 1;
     EXPECT_TRUE(pins_match(4, 1, pins));
 
-    // back to the start
+    // back to the start of the pin sequence
     seek_test(& stepper, 8);
-    EXPECT_EQ(stepper.position(), 8);
     pins[1] = 0;
     EXPECT_TRUE(pins_match(4, 1, pins));
 

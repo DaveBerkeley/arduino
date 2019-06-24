@@ -1,6 +1,6 @@
 
 #define UNUSED(x) ((x) = (x))
-#define ASSERT(x) ASSERT_TRUE(x)
+#define ASSERT(x) EXPECT_TRUE(x)
 
 void mock_setup();
 void mock_teardown();
