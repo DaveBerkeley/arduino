@@ -1,5 +1,6 @@
 
 #include <math.h>
+#include <stdio.h>
 
 #define PIN_MIN 0
 #define PIN_MAX 14

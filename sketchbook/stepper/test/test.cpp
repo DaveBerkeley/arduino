@@ -132,11 +132,21 @@ static void seek_test(Stepper *stepper, int seek)
      *
      */
 
-static void move(Stepper *stepper, int expect)
+static void move(Stepper *stepper, int expect, bool *zero=0)
 {
+    if (zero)
+    {
+        *zero = false;
+    }
+
     while (true)
     {
         const int pos = stepper->position();
+        if (zero && (pos == 0))
+        {
+            // passed through zero
+            *zero = true;
+        }
         if (pos == expect)
             break;
         stepper->poll();
@@ -400,6 +410,103 @@ TEST(Motor, Rotate)
     move(& stepper, cycle - 100);
     // should now have stopped moving
     EXPECT_TRUE(stepper.ready());
+
+    mock_teardown();
+}
+
+    /*
+     *
+     */
+
+static int mod(Stepper *stepper, int t)
+{
+    const int cycle = stepper->get_steps();
+
+    while (t < 0)
+    {
+        t += cycle;
+    }
+    while (t >= cycle)
+    {
+        t -= cycle;
+    }
+    return t;
+}
+
+static void quadrant(Stepper *stepper, int start, bool q1, bool q2, bool q3)
+{
+    start = stepper->clip(start);
+
+    // reset to start
+    stepper->seek(start);
+    move(stepper, start);
+    EXPECT_EQ(stepper->position(), start);
+
+    // forwards
+    int to = mod(stepper, start + 179);
+    stepper->rotate(to);
+    stepper->poll();
+    EXPECT_EQ(stepper->position(), mod(stepper, start+1));
+    stepper->poll();
+    EXPECT_EQ(stepper->position(), mod(stepper, start+2));
+    // ...
+
+    bool zero;
+    move(stepper, to, & zero);
+    EXPECT_TRUE(stepper->ready());
+    // do not pass 0
+    EXPECT_EQ(zero, q1);    
+
+    // reset to start
+    stepper->seek(start);
+    move(stepper, start);
+    EXPECT_EQ(stepper->position(), start);
+
+    // backwards
+    to = mod(stepper, start + 181);
+    stepper->rotate(to);
+    stepper->poll();
+    EXPECT_EQ(stepper->position(), mod(stepper, start-1));
+    stepper->poll();
+    EXPECT_EQ(stepper->position(), mod(stepper, start-2));
+    // ...
+
+    move(stepper, to, & zero);
+    EXPECT_TRUE(stepper->ready());
+    // pass 0
+    EXPECT_EQ(zero, q2);
+
+    // reset to start
+    stepper->seek(start);
+    move(stepper, start);
+    EXPECT_EQ(stepper->position(), start);
+
+    // backwards
+    to = mod(stepper, start + 270);
+    stepper->rotate(to);
+    stepper->poll();
+    EXPECT_EQ(stepper->position(), mod(stepper, start-1));
+    stepper->poll();
+    EXPECT_EQ(stepper->position(), mod(stepper, start-2));
+    // ...
+
+    move(stepper, to, & zero);
+    EXPECT_TRUE(stepper->ready());
+    // pass 0
+    EXPECT_EQ(zero, q3);
+}
+
+TEST(Motor, RotateQuadrants)
+{
+    mock_setup();
+    int cycle = 360;
+    Stepper stepper(cycle, 1, 2, 3, 4);
+
+    EXPECT_EQ(stepper.position(), 0);
+
+    quadrant(& stepper, 45, false, true, true);
+    quadrant(& stepper, 45+90, false, true, false);
+    quadrant(& stepper, 45+180, true, false, false);
 
     mock_teardown();
 }

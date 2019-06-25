@@ -102,34 +102,6 @@ void Stepper::rotate(int t)
 
     t %= steps;
 
-    int half = steps / 2;
-    int delta = t - count;
-
-    // already there?
-    if (delta == 0)
-        return;
-
-    if (delta > 0)
-    {
-        // less than half a turn forward?
-        if (delta < half)
-        {
-            // just seek as normal
-            seek(t);
-            return;
-        }
-    }
-    else
-    {
-        // backwards but still in positive part?
-        if (t >= 0)
-        {
-            // seek as normal
-            seek(t);
-            return;
-        }
-    }
-
     rotate_to = t;
 }
 

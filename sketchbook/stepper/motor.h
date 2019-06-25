@@ -20,7 +20,6 @@ class Stepper
 
     void set_state(int s);
     void step(bool up);
-    int clip(int t);
 
 public:
     Stepper(int cycle, int p1, int p2, int p3, int p4, int time=1000);
@@ -30,6 +29,7 @@ public:
     void rotate(int t);
     int get_target();
     int get_steps();
+    int clip(int t);
     bool ready();
     void zero();
     void set_steps(int s);
