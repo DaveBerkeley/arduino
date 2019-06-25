@@ -131,46 +131,48 @@ int Stepper::get_steps()
     return steps;
 }
 
+int Stepper::get_delta()
+{
+    if (rotate_to == 0)
+    {
+        return target - count;
+    }
+
+    // which direction to move?
+    int d = rotate_to - count;
+    const int half = steps / 2;
+
+    if (d == 0)
+    {
+        return 0;
+    }
+
+    if (d > 0)
+    {
+        // d is +ve
+        if (d < half)
+        {
+            // move forward
+            return d;
+        }
+        // move backwards
+        return -d;
+    }
+
+    // d is -ve
+    if (d >= -half)
+    {
+        // move backwards
+        return d;
+    }
+
+    // move forward
+    return -d;
+}
+
 void Stepper::poll()
 {
-    int delta = target - count;
-
-    if (rotate_to)
-    {
-        // which direction to move?
-        int d = rotate_to - count;
-        const int half = steps / 2;
-        if (d == 0)
-        {
-            delta = 0;
-        }
-        else if (d > 0)
-        {
-            if (d < half)
-            {
-                // move forward
-                delta = d;
-            }
-            else
-            {
-                // move backwards
-                delta = -d;
-            }
-        }
-        else
-        {
-            if (d >= -half)
-            {
-                // move backwards
-                delta = d;
-            }
-            else
-            {
-                // move forward
-                delta = -d;
-            }
-        }
-    }
+    int delta = get_delta();
 
     if (delta == 0)
     {

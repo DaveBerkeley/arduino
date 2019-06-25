@@ -20,6 +20,7 @@ class Stepper
 
     void set_state(int s);
     void step(bool up);
+    int get_delta();
 
 public:
     Stepper(int cycle, int p1, int p2, int p3, int p4, int time=1000);
