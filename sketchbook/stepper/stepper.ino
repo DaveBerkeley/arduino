@@ -82,8 +82,8 @@ static void report(Stepper stepper, int sensor_0, int sensor_1)
         digitalRead(sensor_1) ? 'H' : 'L',
         stepper.position());
 
-    int diff = strcmp(last, buff);
-    bool ready = buff[0] == 'R';
+    const int diff = strcmp(last, buff);
+    const bool ready = buff[0] == 'R';
 
     bool do_report = false;
     if (diff && ready)
