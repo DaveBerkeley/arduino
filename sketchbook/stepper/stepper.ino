@@ -20,6 +20,12 @@ static void on_g(char cmd, int value, void *arg)
     s->seek(value);
 }
 
+static void on_r(char cmd, int value, void *arg)
+{
+    Stepper *s = (Stepper*) arg;
+    s->rotate(value);
+}
+
 static void on_s(char cmd, int value, void *arg)
 {
     Stepper *s = (Stepper*) arg;
@@ -48,11 +54,15 @@ static void on_minus(char cmd, int value, void *arg)
     *   command handler Actions
     */
 
-static Action g_a = { 'G', on_g, & stepper, 0 };
-static Action s_a = { 'S', on_s, & stepper, 0 };
-static Action z_a = { 'Z', on_z, & stepper, 0 };
-static Action p_a = { '+', on_plus, & stepper, 0 };
-static Action m_a = { '-', on_minus, & stepper, 0 };
+static Action actions[] = {
+    { 'G', on_g, & stepper, 0 },
+    { 'S', on_s, & stepper, 0 },
+    { 'R', on_r, & stepper, 0 },
+    { 'Z', on_z, & stepper, 0 },
+    { '+', on_plus, & stepper, 0 },
+    { '-', on_minus, & stepper, 0 },
+    { '\0', 0, 0, 0 },
+};
 
     /*
     *
@@ -112,15 +122,15 @@ static void report(Stepper stepper, int sensor_0, int sensor_1)
 
 void setup () {
     Serial.begin(9600);
+
     pinMode(sensor_0, INPUT);
     pinMode(sensor_1, INPUT);
 
     // Add handlers to CLI
-    cli.add_action(& g_a);
-    cli.add_action(& s_a);
-    cli.add_action(& z_a);
-    cli.add_action(& p_a);
-    cli.add_action(& m_a);
+    for (Action *a = actions; a->cmd; a++)
+    {
+        cli.add_action(a);
+    };
 }
 
 void loop() {
