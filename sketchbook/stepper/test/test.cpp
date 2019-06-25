@@ -433,67 +433,48 @@ static int mod(Stepper *stepper, int t)
     return t;
 }
 
-static void quadrant(Stepper *stepper, int start, bool q1, bool q2, bool q3)
+static void _quadrant(Stepper *stepper, int start, int to, bool forwards, bool crosses_zero)
 {
     start = stepper->clip(start);
+    to = mod(stepper, to);
 
     // reset to start
     stepper->seek(start);
     move(stepper, start);
     EXPECT_EQ(stepper->position(), start);
 
-    // forwards
-    int to = mod(stepper, start + 179);
     stepper->rotate(to);
-    stepper->poll();
-    EXPECT_EQ(stepper->position(), mod(stepper, start+1));
-    stepper->poll();
-    EXPECT_EQ(stepper->position(), mod(stepper, start+2));
-    // ...
+
+    // check the initial movement
+    if (forwards)
+    {
+        stepper->poll();
+        EXPECT_EQ(stepper->position(), mod(stepper, start+1));
+        stepper->poll();
+        EXPECT_EQ(stepper->position(), mod(stepper, start+2));
+        // ...
+    }
+    else
+    {
+        stepper->poll();
+        EXPECT_EQ(stepper->position(), mod(stepper, start-1));
+        stepper->poll();
+        EXPECT_EQ(stepper->position(), mod(stepper, start-2));
+        // ...
+    }
 
     bool zero;
     move(stepper, to, & zero);
     EXPECT_TRUE(stepper->ready());
-    // do not pass 0
-    EXPECT_EQ(zero, q1);    
+    EXPECT_EQ(zero, crosses_zero);    
+}
 
-    // reset to start
-    stepper->seek(start);
-    move(stepper, start);
-    EXPECT_EQ(stepper->position(), start);
-
-    // backwards
-    to = mod(stepper, start + 181);
-    stepper->rotate(to);
-    stepper->poll();
-    EXPECT_EQ(stepper->position(), mod(stepper, start-1));
-    stepper->poll();
-    EXPECT_EQ(stepper->position(), mod(stepper, start-2));
-    // ...
-
-    move(stepper, to, & zero);
-    EXPECT_TRUE(stepper->ready());
-    // pass 0
-    EXPECT_EQ(zero, q2);
-
-    // reset to start
-    stepper->seek(start);
-    move(stepper, start);
-    EXPECT_EQ(stepper->position(), start);
-
-    // backwards
-    to = mod(stepper, start + 270);
-    stepper->rotate(to);
-    stepper->poll();
-    EXPECT_EQ(stepper->position(), mod(stepper, start-1));
-    stepper->poll();
-    EXPECT_EQ(stepper->position(), mod(stepper, start-2));
-    // ...
-
-    move(stepper, to, & zero);
-    EXPECT_TRUE(stepper->ready());
-    // pass 0
-    EXPECT_EQ(zero, q3);
+static void quadrant(Stepper *stepper, int start, bool q1, bool q2, bool q3)
+{
+    _quadrant(stepper, start, start + 179, true, q1);
+    _quadrant(stepper, start, start + 180, false, q2);
+    _quadrant(stepper, start, start + 181, false, q2);
+    _quadrant(stepper, start, start + 270, false, q3);
 }
 
 TEST(Motor, RotateQuadrants)
@@ -507,6 +488,7 @@ TEST(Motor, RotateQuadrants)
     quadrant(& stepper, 45, false, true, true);
     quadrant(& stepper, 45+90, false, true, false);
     quadrant(& stepper, 45+180, true, false, false);
+    quadrant(& stepper, 45+270, true, false, false);
 
     mock_teardown();
 }

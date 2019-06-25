@@ -159,7 +159,7 @@ void Stepper::poll()
         }
         else
         {
-            if (d > -half)
+            if (d >= -half)
             {
                 // move backwards
                 delta = d;
