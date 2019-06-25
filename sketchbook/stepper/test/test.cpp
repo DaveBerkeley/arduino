@@ -93,7 +93,7 @@ TEST(Cli, Cli)
     EXPECT_EQ(arg.fn, on_a);
 
     // check <backspace> deletes (reset)
-    // actually, any unknown cahr will reset the line
+    // actually, any unknown char will reset the line
     memset(& arg, 0, sizeof(arg));
     cli.process("A\b\r\n");
     EXPECT_EQ(arg.cmd, '\0');
@@ -126,6 +126,36 @@ static void seek_test(Stepper *stepper, int seek)
     // should now be in position
     EXPECT_EQ(stepper->position(), seek);
     EXPECT_EQ(stepper->ready(), true);
+}
+
+    /*
+     *
+     */
+
+static void move(Stepper *stepper, int expect)
+{
+    while (true)
+    {
+        const int pos = stepper->position();
+        if (pos == expect)
+            break;
+        stepper->poll();
+    }
+}
+
+static void move_to(Stepper *stepper, int t)
+{
+    const int steps = stepper->get_steps();
+    int expect = t;
+
+    // clip to valid range
+    if (t < 0)
+        expect = 0;
+    if (t >= steps)
+        expect = steps-1;
+
+    stepper->seek(t);
+    move(stepper, expect);
 }
 
     /*
@@ -179,6 +209,66 @@ TEST(Motor, Seek)
         stepper.poll();
     }
     EXPECT_EQ(stepper.position(), cycle - 1);
+
+    mock_teardown();
+}
+
+    /*
+     *
+     */
+
+TEST(Motor, Nowhere)
+{
+    mock_setup();
+
+    int cycle = 5000;
+    Stepper stepper(cycle, 1, 2, 3, 4);
+
+    // seek test
+    EXPECT_EQ(stepper.position(), 0);
+
+    // check it goes nowhere
+    stepper.seek(0);
+    stepper.poll();
+    EXPECT_EQ(stepper.position(), 0);
+    EXPECT_TRUE(stepper.ready());
+
+    move_to(& stepper, 100);
+    EXPECT_EQ(stepper.position(), 100);
+
+    // should already be there
+    stepper.seek(100);
+    stepper.poll();
+    EXPECT_EQ(stepper.position(), 100);
+    EXPECT_TRUE(stepper.ready());
+
+    mock_teardown();
+}
+
+TEST(Motor, RotateNowhere)
+{
+    mock_setup();
+
+    int cycle = 5000;
+    Stepper stepper(cycle, 1, 2, 3, 4);
+
+    // seek test
+    EXPECT_EQ(stepper.position(), 0);
+
+    // check it goes nowhere
+    stepper.rotate(0);
+    stepper.poll();
+    EXPECT_EQ(stepper.position(), 0);
+    EXPECT_TRUE(stepper.ready());
+
+    move_to(& stepper, 100);
+    EXPECT_EQ(stepper.position(), 100);
+
+    // should already be there
+    stepper.rotate(100);
+    stepper.poll();
+    EXPECT_EQ(stepper.position(), 100);
+    EXPECT_TRUE(stepper.ready());
 
     mock_teardown();
 }
@@ -247,6 +337,69 @@ TEST(Motor, IO)
     seek_test(& stepper, 8);
     pins[1] = 0;
     EXPECT_TRUE(pins_match(4, 1, pins));
+
+    mock_teardown();
+}
+
+    /*
+     *
+     */
+
+TEST(Motor, Clip)
+{
+    mock_setup();
+    int cycle = 5000;
+    Stepper stepper(cycle, 1, 2, 3, 4);
+
+    EXPECT_EQ(stepper.position(), 0);
+
+    // should seek to cycle-1
+    move_to(& stepper, cycle + 1000);
+    EXPECT_EQ(stepper.position(), cycle - 1);
+
+    // should seek to 0
+    move_to(& stepper, -1000);
+    EXPECT_EQ(stepper.position(), 0);
+
+    mock_teardown();
+}
+
+    /*
+     *
+     */
+
+TEST(Motor, Rotate)
+{
+    mock_setup();
+    int cycle = 5000;
+    Stepper stepper(cycle, 1, 2, 3, 4);
+
+    EXPECT_EQ(stepper.position(), 0);
+
+    stepper.seek(200);
+    move(& stepper, 200);
+    EXPECT_EQ(stepper.position(), 200);
+
+    // make it go backwards, through 0
+    stepper.rotate(-100);
+    stepper.poll();
+    EXPECT_EQ(stepper.position(), 199);
+    stepper.poll();
+    EXPECT_EQ(stepper.position(), 198);
+    // ...
+
+    // move to 0, on its way to the target
+    move(& stepper, 0);
+    EXPECT_FALSE(stepper.ready());
+
+    // Next poll should move to cycle-1
+    stepper.poll();
+    EXPECT_EQ(stepper.position(), cycle-1);
+    EXPECT_FALSE(stepper.ready());
+
+    move(& stepper, cycle - 100);
+    // should now have stopped moving
+    EXPECT_TRUE(stepper.ready());
 
     mock_teardown();
 }

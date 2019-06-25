@@ -23,7 +23,7 @@ const int Stepper::cycle[STATES][PINS] = {
   */
 
 Stepper::Stepper(int cycle, int p1, int p2, int p3, int p4, int time)
-: state(0), steps(cycle), count(0), target(0), period(time)
+: state(0), steps(cycle), count(0), target(0), rotate_to(0), period(time)
 {
     pins[0] = p1;
     pins[1] = p2;
@@ -72,19 +72,65 @@ int Stepper::position()
     return count;
 }
 
-void Stepper::seek(int t)
+int Stepper::clip(int t)
 {
     // clip to valid limits
     if (t < 0)
     {
-        t = 0;
-    }
-    if (t >= steps)
-    {
-        t = steps - 1;
+        return 0;
     }
 
-    target = t;
+    if (t >= steps)
+    {
+        return steps - 1;
+    }
+
+    return t;
+}
+
+void Stepper::seek(int t)
+{
+    target = clip(t);
+}
+
+void Stepper::rotate(int t)
+{
+    while (t < 0)
+    {
+        t += steps;
+    }
+
+    t %= steps;
+
+    int half = steps / 2;
+    int delta = t - count;
+
+    // already there?
+    if (delta == 0)
+        return;
+
+    if (delta > 0)
+    {
+        // less than half a turn forward?
+        if (delta < half)
+        {
+            // just seek as normal
+            seek(t);
+            return;
+        }
+    }
+    else
+    {
+        // backwards but still in positive part?
+        if (t >= 0)
+        {
+            // seek as normal
+            seek(t);
+            return;
+        }
+    }
+
+    rotate_to = t;
 }
 
 int Stepper::get_target()
@@ -108,14 +154,65 @@ void Stepper::set_steps(int s)
     steps = s;
 }
 
+int Stepper::get_steps()
+{
+    return steps;
+}
+
 void Stepper::poll()
 {
-    const int delta = count - target;
+    int delta = target - count;
+
+    if (rotate_to)
+    {
+        // which direction to move?
+        int d = rotate_to - count;
+        const int half = steps / 2;
+        if (d == 0)
+        {
+            delta = 0;
+        }
+        else if (d > 0)
+        {
+            if (d < half)
+            {
+                // move forward
+                delta = d;
+            }
+            else
+            {
+                // move backwards
+                delta = -d;
+            }
+        }
+        else
+        {
+            if (d > -half)
+            {
+                // move backwards
+                delta = d;
+            }
+            else
+            {
+                // move forward
+                delta = -d;
+            }
+        }
+    }
 
     if (delta == 0)
+    {
         return;
+    }
 
-    step(delta < 0);
+    step(delta > 0);
+
+    if (rotate_to && (rotate_to == count))
+    {
+        //  we've arrived
+        rotate_to = 0;
+        target = count;
+    }
 
     const int move = abs(delta);
 
