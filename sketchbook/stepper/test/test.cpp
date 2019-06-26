@@ -493,4 +493,30 @@ TEST(Motor, RotateQuadrants)
     mock_teardown();
 }
 
+TEST(Motor, RotateZero)
+{
+    mock_setup();
+    int cycle = 360;
+    Stepper stepper(cycle, 1, 2, 3, 4);
+
+    EXPECT_EQ(stepper.position(), 0);
+
+    move_to(& stepper, 100);
+    EXPECT_EQ(stepper.position(), 100);
+
+    // check that ready() false through the seek() position
+    stepper.rotate(0);
+    stepper.seek(99);
+    stepper.poll();
+    EXPECT_EQ(stepper.position(), 99);
+    EXPECT_FALSE(stepper.ready());
+
+    while (stepper.position() != 0)
+    {
+        stepper.poll();
+    }
+
+    mock_teardown();
+}
+
 //  FIN

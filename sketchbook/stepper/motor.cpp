@@ -23,7 +23,7 @@ const int Stepper::cycle[STATES][PINS] = {
   */
 
 Stepper::Stepper(int cycle, int p1, int p2, int p3, int p4, int time)
-: state(0), steps(cycle), count(0), target(0), rotate_to(0), period(time)
+: state(0), steps(cycle), count(0), target(0), rotate_to(-1), period(time)
 {
     pins[0] = p1;
     pins[1] = p2;
@@ -102,7 +102,11 @@ void Stepper::rotate(int t)
 
     t %= steps;
 
-    rotate_to = t;
+    // only set if we're aren't there already
+    if (t != count)
+    {
+        rotate_to = t;
+    }
 }
 
 int Stepper::get_target()
@@ -112,7 +116,7 @@ int Stepper::get_target()
 
 bool Stepper::ready()
 {
-    return target == count;
+    return get_delta() == 0;
 }
 
 void Stepper::zero()
@@ -133,7 +137,7 @@ int Stepper::get_steps()
 
 int Stepper::get_delta()
 {
-    if (rotate_to == 0)
+    if (rotate_to == -1)
     {
         return target - count;
     }
@@ -184,7 +188,7 @@ void Stepper::poll()
     if (rotate_to && (rotate_to == count))
     {
         //  we've arrived
-        rotate_to = 0;
+        rotate_to = -1;
         target = count;
     }
 
