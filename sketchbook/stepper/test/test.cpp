@@ -519,4 +519,23 @@ TEST(Motor, RotateZero)
     mock_teardown();
 }
 
+TEST(Motor, SetZero)
+{
+    mock_setup();
+    int cycle = 360;
+    Stepper stepper(cycle, 1, 2, 3, 4);
+
+    EXPECT_EQ(stepper.position(), 0);
+
+    stepper.zero(100);
+    EXPECT_EQ(stepper.position(), 100);
+    EXPECT_TRUE(stepper.ready());
+
+    stepper.zero();
+    EXPECT_EQ(stepper.position(), 0);
+    EXPECT_TRUE(stepper.ready());
+
+    mock_teardown();
+}
+
 //  FIN

@@ -32,7 +32,7 @@ public:
     int get_steps();
     int clip(int t);
     bool ready();
-    void zero();
+    void zero(int t=0);
     void set_steps(int s);
     void poll();
 };

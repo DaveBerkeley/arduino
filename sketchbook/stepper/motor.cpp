@@ -119,10 +119,10 @@ bool Stepper::ready()
     return get_delta() == 0;
 }
 
-void Stepper::zero()
+void Stepper::zero(int t)
 {
-    target = 0;
-    count = 0;
+    target = t;
+    count = t;
 }
 
 void Stepper::set_steps(int s)

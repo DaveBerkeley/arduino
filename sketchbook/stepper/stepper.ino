@@ -35,7 +35,7 @@ static void on_s(char cmd, int value, void *arg)
 static void on_z(char cmd, int value, void *arg)
 {
     Stepper *s = (Stepper*) arg;
-    s->zero();
+    s->zero(value);
 }
 
 static void on_plus(char cmd, int value, void *arg)
