@@ -6,7 +6,7 @@
     *
     */
 
-static Stepper stepper(4000, 8, 9, 10, 11, 1000);
+static Stepper stepper(4200, 8, 9, 10, 11, 1000);
 static int sensor_0 = 12, sensor_1 = 13;
 static CLI cli;
 

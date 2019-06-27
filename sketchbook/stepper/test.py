@@ -60,7 +60,7 @@ motor = Motor()
 thread = threading.Thread(target=motor.listen, args=(s,))
 thread.start()
 
-end_stop = 4100
+end_stop = 4200
 
 # flush the stepper's command buffer
 time.sleep(1);
@@ -71,13 +71,13 @@ time.sleep(1);
 
 try:
     while True:
-        for i in range(0, end_stop, 1): # 200):
+        for i in range(1):
             j = random.randint(0, end_stop)
             command("G%d" % j);
             motor.wait_for(j)
-        command("G0")
+        command("R0")
         motor.wait_for(0)
-        time.sleep(0.2)
+        time.sleep(1)
 
 except KeyboardInterrupt:
     pass

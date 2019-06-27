@@ -185,7 +185,7 @@ void Stepper::poll()
 
     step(delta > 0);
 
-    if (rotate_to && (rotate_to == count))
+    if ((rotate_to != -1) && (rotate_to == count))
     {
         //  we've arrived
         rotate_to = -1;
