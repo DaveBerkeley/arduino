@@ -18,55 +18,31 @@ static CLI cli;
 static void on_g(char cmd, int argc, int *argv, void *arg)
 {
     Stepper *s = (Stepper*) arg;
-    if (argc)
-    {
-        s->seek(argv[0]);
-    }
+    s->seek(argv[0]);
 }
 
 static void on_r(char cmd, int argc, int *argv, void *arg)
 {
     Stepper *s = (Stepper*) arg;
-    if (argc)
-    {
-        s->rotate(argv[0]);
-    }
+    s->rotate(argv[0]);
 }
 
 static void on_s(char cmd, int argc, int *argv, void *arg)
 {
     Stepper *s = (Stepper*) arg;
-    if (argc)
-    {
-        s->set_steps(argv[0]);
-    }
+    s->set_steps(argv[0]);
 }
 
 static void on_z(char cmd, int argc, int *argv, void *arg)
 {
     Stepper *s = (Stepper*) arg;
-    if (argc)
-    {
-        s->zero(argv[0]);
-    }
+    s->zero(argv[0]);
 }
 
-static void on_plus(char cmd, int argc, int *argv, void *arg)
+static void on_a(char cmd, int argc, int *argv, void *arg)
 {
     Stepper *s = (Stepper*) arg;
-    if (argc)
-    {
-        s->seek(s->get_target() + argv[0]);
-    }
-}
-
-static void on_minus(char cmd, int argc, int *argv, void *arg)
-{
-    Stepper *s = (Stepper*) arg;
-    if (argc)
-    {
-        s->seek(s->get_target() - argv[0]);
-    }
+    s->seek(s->get_target() + argv[0]);
 }
 
     /*
@@ -78,8 +54,7 @@ static Action actions[] = {
     { 'S', on_s, & stepper, 0 },
     { 'R', on_r, & stepper, 0 },
     { 'Z', on_z, & stepper, 0 },
-    { '+', on_plus, & stepper, 0 },
-    { '-', on_minus, & stepper, 0 },
+    { 'A', on_a, & stepper, 0 },
     { '\0', 0, 0, 0 },
 };
 

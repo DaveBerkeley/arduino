@@ -19,6 +19,7 @@ private:
     char command;
     int idx;
     bool num_valid;
+    bool negative;
     Action *actions;
     int values[MAX_VALUES];
 
@@ -26,6 +27,7 @@ private:
 
     void reset();
     void run();
+    void apply_sign();
 
 public:
     CLI(const char *delimit=",");

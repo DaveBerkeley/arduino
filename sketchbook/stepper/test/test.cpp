@@ -104,6 +104,7 @@ TEST(Cli, Cli)
     cli.process("A\r\n");
     EXPECT_EQ(arg.cmd, 'A');
     EXPECT_EQ(arg.argc, 0);
+    EXPECT_EQ(arg.values[0], 0);
     EXPECT_EQ(arg.fn, on_a);
 
     // check <backspace> deletes (reset)
@@ -144,6 +145,41 @@ TEST(Cli, CliMulti)
     EXPECT_EQ(arg.values[0], 0);
     EXPECT_EQ(arg.values[1], 123);
     EXPECT_EQ(arg.values[2], 234);
+}
+
+TEST(Cli, CliSign)
+{
+    CLI cli(":");
+    CliArg arg;
+
+    Action a = { 'A', on_a, & arg, 0 };
+    cli.add_action(& a);
+
+    // check A
+    memset(& arg, 0, sizeof(arg));
+    cli.process("A:-1234:1:-2:3\r\n");
+    EXPECT_EQ(arg.cmd, 'A');
+    EXPECT_EQ(arg.argc, 4);
+    EXPECT_EQ(arg.values[0], -1234);
+    EXPECT_EQ(arg.values[1], 1);
+    EXPECT_EQ(arg.values[2], -2);
+    EXPECT_EQ(arg.values[3], 3);
+
+    cli.process("A0:123:-234\r\n");
+    EXPECT_EQ(arg.cmd, 'A');
+    EXPECT_EQ(arg.argc, 3);
+    EXPECT_EQ(arg.values[0], 0);
+    EXPECT_EQ(arg.values[1], 123);
+    EXPECT_EQ(arg.values[2], -234);
+
+    cli.process("A:-1234:+1:+2:-3\r\n");
+    EXPECT_EQ(arg.cmd, 'A');
+    EXPECT_EQ(arg.argc, 4);
+    EXPECT_EQ(arg.values[0], -1234);
+    EXPECT_EQ(arg.values[1], 1);
+    EXPECT_EQ(arg.values[2], 2);
+    EXPECT_EQ(arg.values[3], -3);
+
 }
 
     /*

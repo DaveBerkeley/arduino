@@ -16,6 +16,7 @@ void CLI::reset()
     }
     idx = 0;
     num_valid = false;
+    negative = false;
 }
 
 void CLI::run()
@@ -43,6 +44,15 @@ void CLI::add_action(Action *action)
     actions = action;
 }
 
+void CLI::apply_sign()
+{
+    if (negative)
+    {
+        values[idx] = -values[idx];
+        negative = false;
+    }
+}
+
 void CLI::process(char c)
 {
     // process any completed line
@@ -52,6 +62,7 @@ void CLI::process(char c)
         {
             if (num_valid)
             {
+                apply_sign();
                 // make sure that the trailing value gets counted
                 idx += 1;
             }
@@ -71,6 +82,20 @@ void CLI::process(char c)
         return;
     }
 
+    // handle '-'/'+' for sign
+    if ((c == '-') || (c == '+'))
+    {
+        if (command && !num_valid)
+        {
+            negative = c == '-';
+        }
+        else
+        {
+            reset();
+        }
+        return;
+    }
+
     // check if the char is a valid command
     for (Action *action = actions; action; action = action->next)
     {
@@ -86,6 +111,7 @@ void CLI::process(char c)
     {
         if (num_valid)
         {
+            apply_sign();
             idx += 1;
         }
         num_valid = false;
