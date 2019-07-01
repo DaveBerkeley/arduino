@@ -1,4 +1,6 @@
 
+#include <string.h>
+
 #include "cli.h"
 
   /*
@@ -8,7 +10,12 @@
 void CLI::reset()
 {
     command = 0;
-    value = 0;
+    for (int i = 0; i < MAX_VALUES; i++)
+    {
+        values[i] = 0;
+    }
+    idx = 0;
+    num_valid = false;
 }
 
 void CLI::run()
@@ -17,14 +24,15 @@ void CLI::run()
     {
         if (action->cmd == command)
         {
-            action->fn(command, value, action->arg);
+            action->fn(command, idx, values, action->arg);
             return;
         }
     }
 }
 
-CLI::CLI()
-: actions(0)
+CLI::CLI(const char *delimit)
+:   actions(0),
+    delim(delimit)
 {
     reset();
 }
@@ -42,6 +50,11 @@ void CLI::process(char c)
     {
         if (command)
         {
+            if (num_valid)
+            {
+                // make sure that the trailing value gets counted
+                idx += 1;
+            }
             run();
         }
         reset();
@@ -52,8 +65,9 @@ void CLI::process(char c)
     if (command && ((c >= '0') && (c <= '9')))
     {
         // numeric
-        value *= 10;
-        value += c - '0';
+        values[idx] *= 10;
+        values[idx] += c - '0';
+        num_valid = true;
         return;
     }
 
@@ -63,9 +77,23 @@ void CLI::process(char c)
         if (action->cmd == c)
         {
             command = c;
-            value = 0;
             return;
         }
+    }
+
+    // check for delimiter
+    if (strchr(delim, c))
+    {
+        if (num_valid)
+        {
+            idx += 1;
+        }
+        num_valid = false;
+        if (idx >= MAX_VALUES)
+        {
+            reset();
+        }
+        return;
     }
 
     // the char doesn't match any known options

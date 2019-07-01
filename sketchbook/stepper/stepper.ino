@@ -15,40 +15,58 @@ static CLI cli;
     *   Command handlers
     */
 
-static void on_g(char cmd, int value, void *arg)
+static void on_g(char cmd, int argc, int *argv, void *arg)
 {
     Stepper *s = (Stepper*) arg;
-    s->seek(value);
+    if (argc)
+    {
+        s->seek(argv[0]);
+    }
 }
 
-static void on_r(char cmd, int value, void *arg)
+static void on_r(char cmd, int argc, int *argv, void *arg)
 {
     Stepper *s = (Stepper*) arg;
-    s->rotate(value);
+    if (argc)
+    {
+        s->rotate(argv[0]);
+    }
 }
 
-static void on_s(char cmd, int value, void *arg)
+static void on_s(char cmd, int argc, int *argv, void *arg)
 {
     Stepper *s = (Stepper*) arg;
-    s->set_steps(value);
+    if (argc)
+    {
+        s->set_steps(argv[0]);
+    }
 }
 
-static void on_z(char cmd, int value, void *arg)
+static void on_z(char cmd, int argc, int *argv, void *arg)
 {
     Stepper *s = (Stepper*) arg;
-    s->zero(value);
+    if (argc)
+    {
+        s->zero(argv[0]);
+    }
 }
 
-static void on_plus(char cmd, int value, void *arg)
+static void on_plus(char cmd, int argc, int *argv, void *arg)
 {
     Stepper *s = (Stepper*) arg;
-    s->seek(s->get_target() + value);
+    if (argc)
+    {
+        s->seek(s->get_target() + argv[0]);
+    }
 }
 
-static void on_minus(char cmd, int value, void *arg)
+static void on_minus(char cmd, int argc, int *argv, void *arg)
 {
     Stepper *s = (Stepper*) arg;
-    s->seek(s->get_target() - value);
+    if (argc)
+    {
+        s->seek(s->get_target() - argv[0]);
+    }
 }
 
     /*
