@@ -69,7 +69,6 @@ Stepper::Stepper(int cycle, MotorIo *io, uint32_t time)
     accel(NONE), 
     reference(0)
 {
-    io->set_state(0);
 }
 
 void Stepper::step(bool up)
