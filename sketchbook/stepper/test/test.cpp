@@ -179,7 +179,6 @@ TEST(Cli, CliSign)
     EXPECT_EQ(arg.values[1], 1);
     EXPECT_EQ(arg.values[2], 2);
     EXPECT_EQ(arg.values[3], -3);
-
 }
 
     /*

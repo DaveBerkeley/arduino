@@ -14,7 +14,7 @@ typedef struct Action
 class CLI
 {
 public:
-    static const int MAX_VALUES = 4;
+    static const int MAX_VALUES = 10;
 private:
     char command;
     int idx;

@@ -70,6 +70,16 @@ command("S%d" % end_stop);
 time.sleep(1);
 
 try:
+
+    while False:
+        x = [ str(random.randint(0, end_stop-1)) for i in range(5) ]
+        command("X" + ",".join(x))
+        time.sleep(0.1)
+
+        while not motor.ready():
+            time.sleep(0.1)
+            if motor.ready():
+                break
     while True:
         for z in range(0, end_stop, 100):
 

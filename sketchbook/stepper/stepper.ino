@@ -1,4 +1,6 @@
 
+#include <list.h>
+
 #include "motor.h"
 #include "cli.h"
 
@@ -10,6 +12,16 @@ static MotorIo_4 motor(8, 9, 10, 11);
 static Stepper stepper(4096, & motor, 1000);
 static int sensor_0 = 12, sensor_1 = 13;
 static CLI cli;
+
+class Sequence : public List
+{
+public:
+    int value;
+
+    Sequence(int v) : value(v) { }
+};
+
+static List *sequence = 0;
 
     /*
     *   Command handlers
@@ -45,6 +57,20 @@ static void on_a(char cmd, int argc, int *argv, void *arg)
     s->seek(s->get_target() + argv[0]);
 }
 
+static void on_x(char cmd, int argc, int *argv, void *arg)
+{
+    for (int i = 0; i < argc; i++)
+    {
+        Sequence *s = new Sequence(argv[i]);
+        if (!s)
+        {
+            break;
+        }
+
+        List::append(& sequence, s);
+    }
+}
+
     /*
     *   command handler Actions
     */
@@ -55,6 +81,7 @@ static Action actions[] = {
     { 'R', on_r, & stepper, 0 },
     { 'Z', on_z, & stepper, 0 },
     { 'A', on_a, & stepper, 0 },
+    { 'X', on_x, 0, 0 },
     { '\0', 0, 0, 0 },
 };
 
@@ -132,9 +159,22 @@ void loop() {
 
     stepper.poll();
 
-    if (Serial.available())
+    while (Serial.available())
     {
         cli.process(Serial.read());
+    }
+
+    if (stepper.ready())
+    {
+        // idle. Check for sequence
+        Sequence *s = (Sequence*) List::pop(& sequence);
+        if (s)
+        {
+            char buff[16];
+            snprintf(buff, sizeof(buff), "G%d\r\n", s->value);
+            cli.process(buff);
+            delete s;
+        }
     }
 }
 
