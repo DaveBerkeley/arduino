@@ -22,8 +22,15 @@ const int Stepper::cycle[STATES][PINS] = {
   *
   */
 
-Stepper::Stepper(int cycle, int p1, int p2, int p3, int p4, int time)
-: state(0), steps(cycle), count(0), target(0), rotate_to(-1), period(time)
+Stepper::Stepper(int cycle, int p1, int p2, int p3, int p4, uint32_t time)
+:   state(0), 
+    steps(cycle), 
+    count(0), 
+    target(0), 
+    rotate_to(-1), 
+    period(time), 
+    accel(NONE), 
+    reference(0)
 {
     pins[0] = p1;
     pins[1] = p2;
@@ -88,9 +95,23 @@ int Stepper::clip(int t)
     return t;
 }
 
+void Stepper::set_accel()
+{
+
+    int delta = get_delta();
+    if (!delta)
+    {
+        return;
+    }
+
+    reference = count;
+    accel = ACCEL;
+}
+
 void Stepper::seek(int t)
 {
     target = clip(t);
+    set_accel();
 }
 
 void Stepper::rotate(int t)
@@ -106,6 +127,7 @@ void Stepper::rotate(int t)
     if (t != count)
     {
         rotate_to = t;
+        set_accel();
     }
 }
 
@@ -174,6 +196,25 @@ int Stepper::get_delta()
     return -d;
 }
 
+static void pause(uint32_t us)
+{
+    // max us delay is 16383 (from Arduino docs)
+    if (us < 10000)
+    {
+        delayMicroseconds(us);
+        return;
+    }
+
+    int ms = us / 1000;
+    delay(ms);
+
+    if (ms < 10)
+    {
+        // still might need those us
+        delayMicroseconds(us % 1000);
+    }
+}
+
 void Stepper::poll()
 {
     int delta = get_delta();
@@ -192,21 +233,44 @@ void Stepper::poll()
         target = count;
     }
 
-    const int move = abs(delta);
+    static const int num = 20;
+    static uint32_t speed[num];
+    static bool init = false;
 
-    // Acceleration / deceleration
-    if (move < 5)
+    if (!init)
     {
-        delayMicroseconds(5 * period);
+        init = true;
+        for (int i = 0; i < num; i++)
+        {
+            const uint32_t fast = period;
+            const uint32_t slow = period * 10;
+            uint32_t s = ((i * fast) + ((num - i) * slow)) / num;
+            speed[i] = s;
+        }
     }
-    else if (move < 20)
+
+    int move = abs(delta);
+
+    if (move < num)
     {
-        delayMicroseconds(2 * period);
+        // looks like decel
+        pause(speed[move]);
+        accel = DECEL;
+        return;
     }
-    else
+
+    if (accel == ACCEL)
     {
-        delayMicroseconds(1 * period);
+        int move = abs(reference - count);
+        if (move < num)
+        {
+            pause(speed[move]);
+            return;
+        }
     }
+
+    accel = NONE;
+    pause(period);
 }
 
 // FIN

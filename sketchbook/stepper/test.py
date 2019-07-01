@@ -71,13 +71,17 @@ time.sleep(1);
 
 try:
     while True:
-        for i in range(1):
-            j = random.randint(0, end_stop)
-            command("G%d" % j);
-            motor.wait_for(j)
-        command("R0")
-        motor.wait_for(0)
-        time.sleep(1)
+        for z in range(0, end_stop, 100):
+
+            for i in range(4):
+                j = random.randint(0, end_stop-1)
+                command("G%d" % j);
+                motor.wait_for(j)
+                time.sleep(0.5)
+
+            command("G0")
+            motor.wait_for(0)
+            time.sleep(1)
 
 except KeyboardInterrupt:
     pass

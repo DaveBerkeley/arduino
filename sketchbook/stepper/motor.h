@@ -3,6 +3,8 @@
   *
   */
 
+#include <stdint.h>
+
 class Stepper
 {
     const static int PINS = 4;
@@ -16,14 +18,19 @@ class Stepper
     int count;
     int target;
     int rotate_to;
-    int period;
+    uint32_t period;
+
+    enum Accel { ACCEL, DECEL, NONE };
+    enum Accel accel;
+    int reference;
 
     void set_state(int s);
     void step(bool up);
     int get_delta();
+    void set_accel();
 
 public:
-    Stepper(int cycle, int p1, int p2, int p3, int p4, int time=1000);
+    Stepper(int cycle, int p1, int p2, int p3, int p4, uint32_t time=1000);
 
     int position();
     void seek(int t);

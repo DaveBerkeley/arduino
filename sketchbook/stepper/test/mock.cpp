@@ -5,7 +5,7 @@
 #include "mock.h"
 
 static int pins[PIN_MAX];
-static long int elapsed_us;
+static uint64_t elapsed_us;
 
 void mock_setup()
 {
@@ -64,6 +64,11 @@ int millis()
 void delayMicroseconds(int us)
 {
     elapsed_us += us;
+}
+
+void delay(int ms)
+{
+    elapsed_us += ms * 1000;
 }
 
 //  FIN

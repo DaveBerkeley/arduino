@@ -21,6 +21,7 @@ enum {
 void digitalWrite(int pin, int value);
 
 void delayMicroseconds(int us);
+void delay(int ms);
 int millis();
 
 // FIN
