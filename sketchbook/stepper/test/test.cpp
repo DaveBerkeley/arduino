@@ -177,7 +177,8 @@ TEST(Motor, Seek)
     mock_setup();
 
     int cycle = 5000;
-    Stepper stepper(cycle, 1, 2, 3, 4);
+    MotorIo motor(1, 2, 3, 4);
+    Stepper stepper(cycle, & motor);
 
     // seek test
     EXPECT_EQ(stepper.position(), 0);
@@ -232,7 +233,8 @@ TEST(Motor, Nowhere)
     mock_setup();
 
     int cycle = 5000;
-    Stepper stepper(cycle, 1, 2, 3, 4);
+    MotorIo motor(1, 2, 3, 4);
+    Stepper stepper(cycle, & motor);
 
     // seek test
     EXPECT_EQ(stepper.position(), 0);
@@ -260,7 +262,8 @@ TEST(Motor, RotateNowhere)
     mock_setup();
 
     int cycle = 5000;
-    Stepper stepper(cycle, 1, 2, 3, 4);
+    MotorIo motor(1, 2, 3, 4);
+    Stepper stepper(cycle, & motor);
 
     // seek test
     EXPECT_EQ(stepper.position(), 0);
@@ -304,7 +307,8 @@ TEST(Motor, IO)
     mock_setup();
 
     int cycle = 5000;
-    Stepper stepper(cycle, 1, 2, 3, 4);
+    MotorIo motor(1, 2, 3, 4);
+    Stepper stepper(cycle, & motor);
 
     int pins[4] = { 0, 0, 0, 0 };
 
@@ -359,7 +363,8 @@ TEST(Motor, Clip)
 {
     mock_setup();
     int cycle = 5000;
-    Stepper stepper(cycle, 1, 2, 3, 4);
+    MotorIo motor(1, 2, 3, 4);
+    Stepper stepper(cycle, & motor);
 
     EXPECT_EQ(stepper.position(), 0);
 
@@ -382,7 +387,8 @@ TEST(Motor, Rotate)
 {
     mock_setup();
     int cycle = 5000;
-    Stepper stepper(cycle, 1, 2, 3, 4);
+    MotorIo motor(1, 2, 3, 4);
+    Stepper stepper(cycle, & motor);
 
     EXPECT_EQ(stepper.position(), 0);
 
@@ -481,7 +487,8 @@ TEST(Motor, RotateQuadrants)
 {
     mock_setup();
     int cycle = 360;
-    Stepper stepper(cycle, 1, 2, 3, 4);
+    MotorIo motor(1, 2, 3, 4);
+    Stepper stepper(cycle, & motor);
 
     EXPECT_EQ(stepper.position(), 0);
 
@@ -497,7 +504,8 @@ TEST(Motor, RotateZero)
 {
     mock_setup();
     int cycle = 360;
-    Stepper stepper(cycle, 1, 2, 3, 4);
+    MotorIo motor(1, 2, 3, 4);
+    Stepper stepper(cycle, & motor);
 
     EXPECT_EQ(stepper.position(), 0);
 
@@ -523,7 +531,8 @@ TEST(Motor, SetZero)
 {
     mock_setup();
     int cycle = 360;
-    Stepper stepper(cycle, 1, 2, 3, 4);
+    MotorIo motor(1, 2, 3, 4);
+    Stepper stepper(cycle, & motor);
 
     EXPECT_EQ(stepper.position(), 0);
 

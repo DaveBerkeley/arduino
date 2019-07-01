@@ -7,7 +7,7 @@
   *
   */
 
-const int Stepper::cycle[STATES][PINS] = {
+const int MotorIo::cycle[STATES][PINS] = {
     { 1, 0, 0, 0 },
     { 1, 0, 0, 1 },
     { 0, 0, 0, 1 },
@@ -18,19 +18,7 @@ const int Stepper::cycle[STATES][PINS] = {
     { 1, 1, 0, 0 },
 };
 
-  /*
-  *
-  */
-
-Stepper::Stepper(int cycle, int p1, int p2, int p3, int p4, uint32_t time)
-:   state(0), 
-    steps(cycle), 
-    count(0), 
-    target(0), 
-    rotate_to(-1), 
-    period(time), 
-    accel(NONE), 
-    reference(0)
+MotorIo::MotorIo(int p1, int p2, int p3, int p4)
 {
     pins[0] = p1;
     pins[1] = p2;
@@ -45,7 +33,7 @@ Stepper::Stepper(int cycle, int p1, int p2, int p3, int p4, uint32_t time)
     set_state(0);
 }
 
-void Stepper::set_state(int s)
+void MotorIo::set_state(int s)
 {
     const int* states = cycle[s];
     for (int i = 0; i < PINS; i++)
@@ -55,7 +43,7 @@ void Stepper::set_state(int s)
     state = s;
 }
 
-void Stepper::step(bool up)
+void MotorIo::step(bool up)
 {
     // calculate next state
     int delta = up ? 1 : -1;
@@ -65,7 +53,31 @@ void Stepper::step(bool up)
     if (s >= STATES)
         s-= STATES;
     set_state(s);
+}
 
+  /*
+  *
+  */
+
+Stepper::Stepper(int cycle, MotorIo *io, uint32_t time)
+:   io(io),
+    steps(cycle), 
+    count(0), 
+    target(0), 
+    rotate_to(-1), 
+    period(time), 
+    accel(NONE), 
+    reference(0)
+{
+    io->set_state(0);
+}
+
+void Stepper::step(bool up)
+{
+    // calculate next state
+    io->step(up);
+
+    int delta = up ? 1 : -1;
     int c = count + delta;
     if (c < 0)
         c += steps;

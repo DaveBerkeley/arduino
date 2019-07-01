@@ -5,7 +5,7 @@
 
 #include <stdint.h>
 
-class Stepper
+class MotorIo
 {
     const static int PINS = 4;
     int pins[PINS];
@@ -14,6 +14,20 @@ class Stepper
     const static int cycle[STATES][PINS];
 
     int state;
+
+public:
+    void set_state(int s);
+    void step(bool up);
+    MotorIo(int p1, int p2, int p3, int p4);
+};
+
+   /*
+    *
+    */
+
+class Stepper
+{
+    MotorIo *io;
     int steps;
     int count;
     int target;
@@ -30,7 +44,7 @@ class Stepper
     void set_accel();
 
 public:
-    Stepper(int cycle, int p1, int p2, int p3, int p4, uint32_t time=1000);
+    Stepper(int cycle, MotorIo* io, uint32_t time=1000);
 
     int position();
     void seek(int t);
