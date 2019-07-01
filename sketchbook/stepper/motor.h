@@ -1,11 +1,25 @@
 
-  /*
-  *
-  */
+    /*
+     *
+     */
 
 #include <stdint.h>
 
+    /*
+     *  Abstract Stepper Interface
+     */
+
 class MotorIo
+{
+public:
+    virtual void step(bool up) = 0;
+};
+
+    /*
+     *  Four wire uni-polar stepper
+     */
+
+class MotorIo_4 : public MotorIo
 {
     const static int PINS = 4;
     int pins[PINS];
@@ -15,10 +29,12 @@ class MotorIo
 
     int state;
 
-public:
     void set_state(int s);
-    void step(bool up);
-    MotorIo(int p1, int p2, int p3, int p4);
+
+public:
+    MotorIo_4(int p1, int p2, int p3, int p4);
+
+    virtual void step(bool up);
 };
 
    /*

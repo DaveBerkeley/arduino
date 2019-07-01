@@ -60,7 +60,7 @@ motor = Motor()
 thread = threading.Thread(target=motor.listen, args=(s,))
 thread.start()
 
-end_stop = 4200
+end_stop = 4096
 
 # flush the stepper's command buffer
 time.sleep(1);

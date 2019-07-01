@@ -3,11 +3,11 @@
 
 #include <Arduino.h>
 
-  /*
-  *
-  */
+    /*
+     *
+     */
 
-const int MotorIo::cycle[STATES][PINS] = {
+const int MotorIo_4::cycle[STATES][PINS] = {
     { 1, 0, 0, 0 },
     { 1, 0, 0, 1 },
     { 0, 0, 0, 1 },
@@ -18,7 +18,7 @@ const int MotorIo::cycle[STATES][PINS] = {
     { 1, 1, 0, 0 },
 };
 
-MotorIo::MotorIo(int p1, int p2, int p3, int p4)
+MotorIo_4::MotorIo_4(int p1, int p2, int p3, int p4)
 {
     pins[0] = p1;
     pins[1] = p2;
@@ -33,7 +33,7 @@ MotorIo::MotorIo(int p1, int p2, int p3, int p4)
     set_state(0);
 }
 
-void MotorIo::set_state(int s)
+void MotorIo_4::set_state(int s)
 {
     const int* states = cycle[s];
     for (int i = 0; i < PINS; i++)
@@ -43,7 +43,7 @@ void MotorIo::set_state(int s)
     state = s;
 }
 
-void MotorIo::step(bool up)
+void MotorIo_4::step(bool up)
 {
     // calculate next state
     int delta = up ? 1 : -1;
@@ -177,12 +177,12 @@ int Stepper::get_delta()
 
     // which direction to move?
     int d = rotate_to - count;
-    const int half = steps / 2;
-
     if (d == 0)
     {
         return 0;
     }
+
+    const int half = steps / 2;
 
     if (d > 0)
     {
@@ -210,7 +210,7 @@ int Stepper::get_delta()
 static void pause(uint32_t us)
 {
     // max us delay is 16383 (from Arduino docs)
-    if (us < 10000)
+    if (us < 16000)
     {
         delayMicroseconds(us);
         return;

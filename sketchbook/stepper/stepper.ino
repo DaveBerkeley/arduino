@@ -6,8 +6,8 @@
     *
     */
 
-static MotorIo motor(8, 9, 10, 11);
-static Stepper stepper(4200, & motor, 1000);
+static MotorIo_4 motor(8, 9, 10, 11);
+static Stepper stepper(4096, & motor, 1000);
 static int sensor_0 = 12, sensor_1 = 13;
 static CLI cli;
 
