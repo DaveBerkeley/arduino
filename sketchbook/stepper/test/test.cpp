@@ -55,7 +55,7 @@ TEST(Cli, Cli)
     CLI cli;
     CliArg arg;
 
-    Action a = { 'A', on_a, & arg, 0 };
+    Action a = { "A", on_a, & arg, 0 };
     cli.add_action(& a);
 
     // check A
@@ -65,7 +65,7 @@ TEST(Cli, Cli)
     EXPECT_EQ(arg.values[0], 1234);
     EXPECT_EQ(arg.fn, on_a);
 
-    Action b = { 'B', on_b, & arg, 0 };
+    Action b = { "B", on_b, & arg, 0 };
     cli.add_action(& b);
 
     // check B
@@ -121,7 +121,7 @@ TEST(Cli, CliMulti)
     CLI cli(":");
     CliArg arg;
 
-    Action a = { 'A', on_a, & arg, 0 };
+    Action a = { "A", on_a, & arg, 0 };
     cli.add_action(& a);
 
     // check A
@@ -152,7 +152,7 @@ TEST(Cli, CliSign)
     CLI cli(":");
     CliArg arg;
 
-    Action a = { 'A', on_a, & arg, 0 };
+    Action a = { "A", on_a, & arg, 0 };
     cli.add_action(& a);
 
     // check A

@@ -5,7 +5,7 @@
 
 typedef struct Action
 {
-    const char cmd;
+    const char *cmd;
     void (*fn)(char cmd, int argc, int *argv, void *arg);
     void *arg;
     struct Action *next;
@@ -15,8 +15,10 @@ class CLI
 {
 public:
     static const int MAX_VALUES = 10;
+    static const int MAX_CMD = 4;
 private:
-    char command;
+    char command[MAX_CMD];
+    int cmd_idx;
     int idx;
     bool num_valid;
     bool negative;

@@ -9,11 +9,9 @@
 
 void CLI::reset()
 {
-    command = 0;
-    for (int i = 0; i < MAX_VALUES; i++)
-    {
-        values[i] = 0;
-    }
+    command[0] = '\0';
+    cmd_idx = 0;
+    memset(values, 0, sizeof(values));
     idx = 0;
     num_valid = false;
     negative = false;
@@ -23,9 +21,9 @@ void CLI::run()
 {
     for (Action *action = actions; actions; action = action->next)
     {
-        if (action->cmd == command)
+        if (action->cmd[0] == command[0])
         {
-            action->fn(command, idx, values, action->arg);
+            action->fn(command[0], idx, values, action->arg);
             return;
         }
     }
@@ -58,7 +56,7 @@ void CLI::process(char c)
     // process any completed line
     if ((c == '\r') || (c == '\n'))
     {
-        if (command)
+        if (command[0])
         {
             if (num_valid)
             {
@@ -73,7 +71,7 @@ void CLI::process(char c)
     }
 
     // handle numeric values
-    if (command && ((c >= '0') && (c <= '9')))
+    if (command[0] && ((c >= '0') && (c <= '9')))
     {
         // numeric
         values[idx] *= 10;
@@ -85,7 +83,7 @@ void CLI::process(char c)
     // handle '-'/'+' for sign
     if ((c == '-') || (c == '+'))
     {
-        if (command && !num_valid)
+        if (command[0] && !num_valid)
         {
             negative = c == '-';
         }
@@ -99,9 +97,9 @@ void CLI::process(char c)
     // check if the char is a valid command
     for (Action *action = actions; action; action = action->next)
     {
-        if (action->cmd == c)
+        if (action->cmd[0] == c)
         {
-            command = c;
+            command[0] = c;
             return;
         }
     }

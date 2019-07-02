@@ -52,11 +52,11 @@ static void on_a(char cmd, int argc, int *argv, void *arg)
     */
 
 static Action actions[] = {
-    { 'G', on_g, & stepper, 0 },
-    { 'S', on_s, & stepper, 0 },
-    { 'R', on_r, & stepper, 0 },
-    { 'Z', on_z, & stepper, 0 },
-    { 'A', on_a, & stepper, 0 },
+    { "G", on_g, & stepper, 0 },
+    { "S", on_s, & stepper, 0 },
+    { "R", on_r, & stepper, 0 },
+    { "Z", on_z, & stepper, 0 },
+    { "A", on_a, & stepper, 0 },
     { '\0', 0, 0, 0 },
 };
 
