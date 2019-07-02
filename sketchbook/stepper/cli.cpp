@@ -10,7 +10,6 @@
 void CLI::reset()
 {
     memset(command, 0, sizeof(command));
-    cmd_idx = 0;
     match = 0;
     memset(values, 0, sizeof(values));
     idx = 0;
@@ -52,9 +51,9 @@ bool CLI::match_action(Action **a)
 {
     for (Action *action = actions; action; action = action->next)
     {
-        if (!strncmp(action->cmd, command, cmd_idx))
+        if (!strncmp(action->cmd, command, idx))
         {
-            if (cmd_idx == (int) strlen(action->cmd))
+            if (idx == (int) strlen(action->cmd))
             {
                 *a = action;
             }
@@ -70,9 +69,9 @@ void CLI::process(char c)
     if (!match)
     {
         // add char to cmd buffer
-        command[cmd_idx++] = c;
+        command[idx++] = c;
 
-        if (cmd_idx >= MAX_CMD)
+        if (idx >= MAX_CMD)
         {
             reset();
             return;
@@ -81,7 +80,11 @@ void CLI::process(char c)
         Action *a = 0;
         if (match_action(& a))
         {
-            match = a;
+            if (a)
+            {
+                idx = 0;
+                match = a;
+            }
             return;
         }
         reset();

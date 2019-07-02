@@ -18,13 +18,12 @@ public:
     static const int MAX_CMD = 6;
 private:
     char command[MAX_CMD];
-    int cmd_idx;
-    int idx;
     bool num_valid;
     bool negative;
+    int idx;
     Action *actions;
-    int values[MAX_VALUES];
     Action *match;
+    int values[MAX_VALUES];
 
     const char *delim;
 
