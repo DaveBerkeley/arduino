@@ -1,6 +1,4 @@
 
-#include <list.h>
-
 #include "motor.h"
 #include "cli.h"
 
