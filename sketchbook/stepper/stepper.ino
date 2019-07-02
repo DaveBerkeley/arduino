@@ -41,10 +41,16 @@ static void on_z(Action *action, int argc, int *argv)
     s->zero(argv[0]);
 }
 
-static void on_a(Action *action, int argc, int *argv)
+static void on_p(Action *action, int argc, int *argv)
 {
     Stepper *s = (Stepper*) action->arg;
     s->seek(s->get_target() + argv[0]);
+}
+
+static void on_m(Action *action, int argc, int *argv)
+{
+    Stepper *s = (Stepper*) action->arg;
+    s->seek(s->get_target() - argv[0]);
 }
 
     /*
@@ -56,7 +62,8 @@ static Action actions[] = {
     { "S", on_s, & stepper, 0 },
     { "R", on_r, & stepper, 0 },
     { "Z", on_z, & stepper, 0 },
-    { "A", on_a, & stepper, 0 },
+    { "+", on_p, & stepper, 0 },
+    { "-", on_m, & stepper, 0 },
     { '\0', 0, 0, 0 },
 };
 

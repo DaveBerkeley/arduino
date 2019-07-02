@@ -165,6 +165,7 @@ TEST(Cli, CliSign)
     EXPECT_EQ(arg.values[2], -2);
     EXPECT_EQ(arg.values[3], 3);
 
+    memset(& arg, 0, sizeof(arg));
     cli.process("A0:123:-234\r\n");
     EXPECT_EQ(arg.action, & a);
     EXPECT_EQ(arg.argc, 3);
@@ -172,6 +173,7 @@ TEST(Cli, CliSign)
     EXPECT_EQ(arg.values[1], 123);
     EXPECT_EQ(arg.values[2], -234);
 
+    memset(& arg, 0, sizeof(arg));
     cli.process("A:-1234:+1:+2:-3\r\n");
     EXPECT_EQ(arg.action, & a);
     EXPECT_EQ(arg.argc, 4);
@@ -179,6 +181,22 @@ TEST(Cli, CliSign)
     EXPECT_EQ(arg.values[1], 1);
     EXPECT_EQ(arg.values[2], 2);
     EXPECT_EQ(arg.values[3], -3);
+
+    // '+' can also be a command
+    Action b = { "+", on_a, & arg, 0 };
+    cli.add_action(& b);
+
+    memset(& arg, 0, sizeof(arg));
+    cli.process("+100\r\n");
+    EXPECT_EQ(arg.action, & b);
+    EXPECT_EQ(arg.argc, 1);
+    EXPECT_EQ(arg.values[0], 100);
+
+    memset(& arg, 0, sizeof(arg));
+    cli.process("+-100\r\n");
+    EXPECT_EQ(arg.action, & b);
+    EXPECT_EQ(arg.argc, 1);
+    EXPECT_EQ(arg.values[0], -100);
 }
 
 TEST(Cli, CliString)
