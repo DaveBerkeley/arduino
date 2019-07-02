@@ -9,8 +9,9 @@
 
 void CLI::reset()
 {
-    command[0] = '\0';
+    memset(command, 0, sizeof(command));
     cmd_idx = 0;
+    match = 0;
     memset(values, 0, sizeof(values));
     idx = 0;
     num_valid = false;
@@ -19,13 +20,9 @@ void CLI::reset()
 
 void CLI::run()
 {
-    for (Action *action = actions; actions; action = action->next)
+    if (match)
     {
-        if (action->cmd[0] == command[0])
-        {
-            action->fn(command[0], idx, values, action->arg);
-            return;
-        }
+        match->fn(match, idx, values);
     }
 }
 
@@ -51,27 +48,62 @@ void CLI::apply_sign()
     }
 }
 
+bool CLI::match_action(Action **a)
+{
+    for (Action *action = actions; action; action = action->next)
+    {
+        if (!strncmp(action->cmd, command, cmd_idx))
+        {
+            if (cmd_idx == (int) strlen(action->cmd))
+            {
+                *a = action;
+            }
+            return true;
+        }
+    }
+    return false;
+}
+
 void CLI::process(char c)
 {
-    // process any completed line
-    if ((c == '\r') || (c == '\n'))
+    // check if the char is a valid command
+    if (!match)
     {
-        if (command[0])
+        // add char to cmd buffer
+        command[cmd_idx++] = c;
+
+        if (cmd_idx >= MAX_CMD)
         {
-            if (num_valid)
-            {
-                apply_sign();
-                // make sure that the trailing value gets counted
-                idx += 1;
-            }
-            run();
+            reset();
+            return;
+        }
+
+        Action *a = 0;
+        if (match_action(& a))
+        {
+            match = a;
+            return;
         }
         reset();
         return;
     }
 
+    // process any completed line
+    if ((c == '\r') || (c == '\n'))
+    {
+        if (num_valid)
+        {
+            apply_sign();
+            // make sure that the trailing value gets counted
+            idx += 1;
+        }
+        run();
+        reset();
+        return;
+    }
+
     // handle numeric values
-    if (command[0] && ((c >= '0') && (c <= '9')))
+    if ((c >= '0') && (c <= '9'))
     {
         // numeric
         values[idx] *= 10;
@@ -83,7 +115,7 @@ void CLI::process(char c)
     // handle '-'/'+' for sign
     if ((c == '-') || (c == '+'))
     {
-        if (command[0] && !num_valid)
+        if (!num_valid)
         {
             negative = c == '-';
         }
@@ -92,16 +124,6 @@ void CLI::process(char c)
             reset();
         }
         return;
-    }
-
-    // check if the char is a valid command
-    for (Action *action = actions; action; action = action->next)
-    {
-        if (action->cmd[0] == c)
-        {
-            command[0] = c;
-            return;
-        }
     }
 
     // check for delimiter

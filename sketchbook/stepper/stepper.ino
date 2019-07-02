@@ -17,33 +17,33 @@ static CLI cli;
     *   Command handlers
     */
 
-static void on_g(char cmd, int argc, int *argv, void *arg)
+static void on_g(Action *action, int argc, int *argv)
 {
-    Stepper *s = (Stepper*) arg;
+    Stepper *s = (Stepper*) action->arg;
     s->seek(argv[0]);
 }
 
-static void on_r(char cmd, int argc, int *argv, void *arg)
+static void on_r(Action *action, int argc, int *argv)
 {
-    Stepper *s = (Stepper*) arg;
+    Stepper *s = (Stepper*) action->arg;
     s->rotate(argv[0]);
 }
 
-static void on_s(char cmd, int argc, int *argv, void *arg)
+static void on_s(Action *action, int argc, int *argv)
 {
-    Stepper *s = (Stepper*) arg;
+    Stepper *s = (Stepper*) action->arg;
     s->set_steps(argv[0]);
 }
 
-static void on_z(char cmd, int argc, int *argv, void *arg)
+static void on_z(Action *action, int argc, int *argv)
 {
-    Stepper *s = (Stepper*) arg;
+    Stepper *s = (Stepper*) action->arg;
     s->zero(argv[0]);
 }
 
-static void on_a(char cmd, int argc, int *argv, void *arg)
+static void on_a(Action *action, int argc, int *argv)
 {
-    Stepper *s = (Stepper*) arg;
+    Stepper *s = (Stepper*) action->arg;
     s->seek(s->get_target() + argv[0]);
 }
 

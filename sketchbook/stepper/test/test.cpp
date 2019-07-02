@@ -10,40 +10,40 @@
 #include "../motor.h"
 
 typedef struct {
-    char cmd;
+    Action *action;
     int values[CLI::MAX_VALUES];
     int argc;
-    void (*fn)(char cmd, int argc, int *argv, void *arg);
+    void (*fn)(Action *a, int argc, int *argv);
 }   CliArg;
 
-static void on_a(char cmd, int argc, int *argv, void *arg)
+static void on_x(Action *a, int argc, int *argv, void (*fn)(Action *a, int argc, int *argv))
 {
-    ASSERT(arg);
-    CliArg *cli_arg = (CliArg*) arg;
+    ASSERT(a);
+    CliArg *cli_arg = (CliArg*) a->arg;
 
-    cli_arg->cmd = cmd;
+    cli_arg->action = a;
     cli_arg->argc = argc;
 
     for (int i = 0; i < argc; i++)
     {
         cli_arg->values[i] = argv[i];
     }
-    cli_arg->fn = on_a;
+    cli_arg->fn = fn;
 }
 
-static void on_b(char cmd, int argc, int *argv, void *arg)
+static void on_a(Action *a, int argc, int *argv)
 {
-    ASSERT(arg);
-    CliArg *cli_arg = (CliArg*) arg;
+    on_x(a, argc, argv, on_a);
+}
 
-    cli_arg->cmd = cmd;
-    cli_arg->argc = argc;
+static void on_b(Action *a, int argc, int *argv)
+{
+    on_x(a, argc, argv, on_b);
+}
 
-    for (int i = 0; i < argc; i++)
-    {
-        cli_arg->values[i] = argv[i];
-    }
-    cli_arg->fn = on_b;
+static void on_str(Action *a, int argc, int *argv)
+{
+    on_x(a, argc, argv, on_str);
 }
 
     /*
@@ -61,7 +61,7 @@ TEST(Cli, Cli)
     // check A
     memset(& arg, 0, sizeof(arg));
     cli.process("A1234\r\n");
-    EXPECT_EQ(arg.cmd, 'A');
+    EXPECT_EQ(arg.action, & a);
     EXPECT_EQ(arg.values[0], 1234);
     EXPECT_EQ(arg.fn, on_a);
 
@@ -71,7 +71,7 @@ TEST(Cli, Cli)
     // check B
     memset(& arg, 0, sizeof(arg));
     cli.process("B0\r\n");
-    EXPECT_EQ(arg.cmd, 'B');
+    EXPECT_EQ(arg.action, & b);
     EXPECT_EQ(arg.argc, 1);
     EXPECT_EQ(arg.values[0], 0);
     EXPECT_EQ(arg.fn, on_b);
@@ -79,7 +79,7 @@ TEST(Cli, Cli)
     // check A still works
     memset(& arg, 0, sizeof(arg));
     cli.process("A1234\r\n");
-    EXPECT_EQ(arg.cmd, 'A');
+    EXPECT_EQ(arg.action, & a);
     EXPECT_EQ(arg.argc, 1);
     EXPECT_EQ(arg.values[0], 1234);
     EXPECT_EQ(arg.fn, on_a);
@@ -87,7 +87,7 @@ TEST(Cli, Cli)
     // check some non commands
     memset(& arg, 0, sizeof(arg));
     cli.process("123\r\n");
-    EXPECT_EQ(arg.cmd, '\0');
+    EXPECT_EQ(arg.action, (void*)0);
     EXPECT_EQ(arg.argc, 0);
     EXPECT_EQ(arg.values[0], 0);
     EXPECT_EQ(arg.fn, (void*) 0);
@@ -95,14 +95,14 @@ TEST(Cli, Cli)
     // check no command
     memset(& arg, 0, sizeof(arg));
     cli.process("\r\n");
-    EXPECT_EQ(arg.cmd, '\0');
+    EXPECT_EQ(arg.action, (void*)0);
     EXPECT_EQ(arg.argc, 0);
     EXPECT_EQ(arg.fn, (void*) 0);
 
     // check default 0
     memset(& arg, 0, sizeof(arg));
     cli.process("A\r\n");
-    EXPECT_EQ(arg.cmd, 'A');
+    EXPECT_EQ(arg.action, & a);
     EXPECT_EQ(arg.argc, 0);
     EXPECT_EQ(arg.values[0], 0);
     EXPECT_EQ(arg.fn, on_a);
@@ -111,7 +111,7 @@ TEST(Cli, Cli)
     // actually, any unknown char will reset the line
     memset(& arg, 0, sizeof(arg));
     cli.process("A\b\r\n");
-    EXPECT_EQ(arg.cmd, '\0');
+    EXPECT_EQ(arg.action, (void*)0);
     EXPECT_EQ(arg.argc, 0);
     EXPECT_EQ(arg.fn, (void*)0);
 }
@@ -127,7 +127,7 @@ TEST(Cli, CliMulti)
     // check A
     memset(& arg, 0, sizeof(arg));
     cli.process("A:1234:1:2:3\r\n");
-    EXPECT_EQ(arg.cmd, 'A');
+    EXPECT_EQ(arg.action, & a);
     EXPECT_EQ(arg.argc, 4);
     EXPECT_EQ(arg.values[0], 1234);
     EXPECT_EQ(arg.values[1], 1);
@@ -135,12 +135,12 @@ TEST(Cli, CliMulti)
     EXPECT_EQ(arg.values[3], 3);
 
     cli.process("A0\r\n");
-    EXPECT_EQ(arg.cmd, 'A');
+    EXPECT_EQ(arg.action, & a);
     EXPECT_EQ(arg.argc, 1);
     EXPECT_EQ(arg.values[0], 0);
 
     cli.process("A0:123:234\r\n");
-    EXPECT_EQ(arg.cmd, 'A');
+    EXPECT_EQ(arg.action, & a);
     EXPECT_EQ(arg.argc, 3);
     EXPECT_EQ(arg.values[0], 0);
     EXPECT_EQ(arg.values[1], 123);
@@ -158,7 +158,7 @@ TEST(Cli, CliSign)
     // check A
     memset(& arg, 0, sizeof(arg));
     cli.process("A:-1234:1:-2:3\r\n");
-    EXPECT_EQ(arg.cmd, 'A');
+    EXPECT_EQ(arg.action, & a);
     EXPECT_EQ(arg.argc, 4);
     EXPECT_EQ(arg.values[0], -1234);
     EXPECT_EQ(arg.values[1], 1);
@@ -166,19 +166,95 @@ TEST(Cli, CliSign)
     EXPECT_EQ(arg.values[3], 3);
 
     cli.process("A0:123:-234\r\n");
-    EXPECT_EQ(arg.cmd, 'A');
+    EXPECT_EQ(arg.action, & a);
     EXPECT_EQ(arg.argc, 3);
     EXPECT_EQ(arg.values[0], 0);
     EXPECT_EQ(arg.values[1], 123);
     EXPECT_EQ(arg.values[2], -234);
 
     cli.process("A:-1234:+1:+2:-3\r\n");
-    EXPECT_EQ(arg.cmd, 'A');
+    EXPECT_EQ(arg.action, & a);
     EXPECT_EQ(arg.argc, 4);
     EXPECT_EQ(arg.values[0], -1234);
     EXPECT_EQ(arg.values[1], 1);
     EXPECT_EQ(arg.values[2], 2);
     EXPECT_EQ(arg.values[3], -3);
+}
+
+TEST(Cli, CliString)
+{
+    CLI cli;
+    CliArg arg;
+
+    Action a = { "GO ", on_str, & arg, 0 };
+    Action b = { "MOVE", on_str, & arg, 0 };
+    Action c = { "HELP", on_str, & arg, 0 };
+    cli.add_action(& a);
+    cli.add_action(& b);
+    cli.add_action(& c);
+
+    // check GO
+    memset(& arg, 0, sizeof(arg));
+    cli.process("GO 1234,2345\r\n");
+    EXPECT_EQ(arg.action, & a);
+    EXPECT_EQ(arg.argc, 2);
+    EXPECT_EQ(arg.values[0], 1234);
+    EXPECT_EQ(arg.values[1], 2345);
+
+    // check MOVE
+    memset(& arg, 0, sizeof(arg));
+    cli.process("MOVE1234\r\n");
+    EXPECT_EQ(arg.action, & b);
+    EXPECT_EQ(arg.argc, 1);
+    EXPECT_EQ(arg.values[0], 1234);
+
+    // check HELP
+    memset(& arg, 0, sizeof(arg));
+    cli.process("HELP\r\n");
+    EXPECT_EQ(arg.action, & c);
+    EXPECT_EQ(arg.argc, 0);
+}
+
+TEST(Cli, CliSimilar)
+{
+    CLI cli;
+    CliArg arg;
+
+    Action a = { "ABC", on_str, & arg, 0 };
+    Action b = { "ABE", on_str, & arg, 0 };
+    cli.add_action(& a);
+    cli.add_action(& b);
+
+    // check ABC
+    memset(& arg, 0, sizeof(arg));
+    cli.process("ABC1234,2345\r\n");
+    EXPECT_EQ(arg.action, & a);
+    EXPECT_EQ(arg.argc, 2);
+    EXPECT_EQ(arg.values[0], 1234);
+    EXPECT_EQ(arg.values[1], 2345);
+
+    // check ABE
+    memset(& arg, 0, sizeof(arg));
+    cli.process("ABE1234\r\n");
+    EXPECT_EQ(arg.action, & b);
+    EXPECT_EQ(arg.argc, 1);
+    EXPECT_EQ(arg.values[0], 1234);
+
+    Action c = { "AB", on_str, & arg, 0 };
+    cli.add_action(& c);
+
+    // check AB
+    memset(& arg, 0, sizeof(arg));
+    cli.process("AB1234\r\n");
+    EXPECT_EQ(arg.action, & c);
+    EXPECT_EQ(arg.argc, 1);
+    EXPECT_EQ(arg.values[0], 1234);
+
+    // check ABE no longer matches
+    memset(& arg, 0, sizeof(arg));
+    cli.process("ABE1234\r\n");
+    EXPECT_EQ(arg.action, (void*)0);
+    EXPECT_EQ(arg.argc, 0);
 }
 
     /*
