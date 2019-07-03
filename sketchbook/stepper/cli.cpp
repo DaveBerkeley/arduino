@@ -15,6 +15,7 @@ void CLI::reset()
     idx = 0;
     num_valid = false;
     negative = false;
+    cursor = 0;
 }
 
 void CLI::run()
@@ -27,7 +28,8 @@ void CLI::run()
 
 CLI::CLI(const char *delimit)
 :   actions(0),
-    delim(delimit)
+    delim(delimit),
+    err_fn(0)
 {
     reset();
 }
@@ -36,6 +38,19 @@ void CLI::add_action(Action *action)
 {
     action->next = actions;
     actions = action;
+}
+
+void CLI::set_error_fn(ErrorFn fn)
+{
+    err_fn = fn;
+}
+
+void CLI::error(enum Error err)
+{
+    if (err_fn)
+    {
+        err_fn(match, cursor, err);
+    }
 }
 
 void CLI::apply_sign()
@@ -65,6 +80,38 @@ bool CLI::match_action(Action **a)
 
 void CLI::process(char c)
 {
+    cursor += 1;
+
+    // process any completed line
+    if (c == '\r')
+    {
+        if (num_valid)
+        {
+            apply_sign();
+            // make sure that the trailing value gets counted
+            idx += 1;
+        }
+        if (idx > 0)
+        {
+            if (!num_valid)
+            {
+                error(ERR_NUM_EXPECTED);
+                reset();
+                return;
+            }
+        }
+        run();
+        reset();
+        return;
+    }
+
+    if (c == '\n')
+    {
+        // just ignore '\n'
+        reset();
+        return;
+    }
+
     // check if the char is a valid command
     if (!match)
     {
@@ -73,6 +120,7 @@ void CLI::process(char c)
 
         if (idx >= MAX_CMD)
         {
+            error(ERR_TOO_LONG);
             reset();
             return;
         }
@@ -87,20 +135,8 @@ void CLI::process(char c)
             }
             return;
         }
-        reset();
-        return;
-    }
 
-    // process any completed line
-    if ((c == '\r') || (c == '\n'))
-    {
-        if (num_valid)
-        {
-            apply_sign();
-            // make sure that the trailing value gets counted
-            idx += 1;
-        }
-        run();
+        error(ERR_UNKNOWN_CMD);
         reset();
         return;
     }
@@ -124,6 +160,7 @@ void CLI::process(char c)
         }
         else
         {
+            error(ERR_BAD_SIGN);
             reset();
         }
         return;
@@ -137,15 +174,19 @@ void CLI::process(char c)
             apply_sign();
             idx += 1;
         }
+
         num_valid = false;
+
         if (idx >= MAX_VALUES)
         {
+            error(ERR_TOO_LONG);
             reset();
         }
         return;
     }
 
     // the char doesn't match any known options
+    error(ERR_BAD_CHAR);
     reset();
 }
 

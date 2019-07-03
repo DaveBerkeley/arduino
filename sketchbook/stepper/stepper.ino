@@ -42,13 +42,13 @@ static void on_z(Action *action, int argc, int *argv)
 static void on_p(Action *action, int argc, int *argv)
 {
     Stepper *s = (Stepper*) action->arg;
-    s->seek(s->get_target() + argv[0]);
+    s->rotate(s->get_target() + argv[0]);
 }
 
 static void on_m(Action *action, int argc, int *argv)
 {
     Stepper *s = (Stepper*) action->arg;
-    s->seek(s->get_target() - argv[0]);
+    s->rotate(s->get_target() - argv[0]);
 }
 
     /*

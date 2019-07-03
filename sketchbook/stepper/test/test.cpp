@@ -126,7 +126,7 @@ TEST(Cli, CliMulti)
 
     // check A
     memset(& arg, 0, sizeof(arg));
-    cli.process("A:1234:1:2:3\r\n");
+    cli.process("A1234:1:2:3\r\n");
     EXPECT_EQ(arg.action, & a);
     EXPECT_EQ(arg.argc, 4);
     EXPECT_EQ(arg.values[0], 1234);
@@ -157,7 +157,7 @@ TEST(Cli, CliSign)
 
     // check A
     memset(& arg, 0, sizeof(arg));
-    cli.process("A:-1234:1:-2:3\r\n");
+    cli.process("A-1234:1:-2:3\r\n");
     EXPECT_EQ(arg.action, & a);
     EXPECT_EQ(arg.argc, 4);
     EXPECT_EQ(arg.values[0], -1234);
@@ -174,13 +174,22 @@ TEST(Cli, CliSign)
     EXPECT_EQ(arg.values[2], -234);
 
     memset(& arg, 0, sizeof(arg));
-    cli.process("A:-1234:+1:+2:-3\r\n");
+    cli.process("A-1234:+1:+2:-3\r\n");
     EXPECT_EQ(arg.action, & a);
     EXPECT_EQ(arg.argc, 4);
     EXPECT_EQ(arg.values[0], -1234);
     EXPECT_EQ(arg.values[1], 1);
     EXPECT_EQ(arg.values[2], 2);
     EXPECT_EQ(arg.values[3], -3);
+
+    // implicit seperator after comand
+    memset(& arg, 0, sizeof(arg));
+    cli.process("A:1:2:-3\r\n");
+    EXPECT_EQ(arg.action, & a);
+    EXPECT_EQ(arg.argc, 3);
+    EXPECT_EQ(arg.values[0], 1);
+    EXPECT_EQ(arg.values[1], 2);
+    EXPECT_EQ(arg.values[2], -3);
 
     // '+' can also be a command
     Action b = { "+", on_a, & arg, 0 };
@@ -273,6 +282,119 @@ TEST(Cli, CliSimilar)
     cli.process("ABE1234\r\n");
     EXPECT_EQ(arg.action, (void*)0);
     EXPECT_EQ(arg.argc, 0);
+}
+
+    /*
+     *
+     */
+
+typedef struct {
+    Action *a;
+    int cursor;
+    CLI::Error err;
+}   ErrorInfo;
+
+static ErrorInfo err_info;
+
+static void err_fn(Action *a, int cursor, CLI::Error err)
+{
+    err_info.a = a;
+    err_info.cursor = cursor;
+    err_info.err = err;
+}
+
+void x() { }
+TEST(Cli, ErrorFn)
+{
+    x();
+    CLI cli;
+    CliArg arg;
+
+    cli.set_error_fn(err_fn);
+
+    Action a = { "ABC", on_str, & arg, 0 };
+    Action b = { "ABE", on_str, & arg, 0 };
+    cli.add_action(& a);
+    cli.add_action(& b);
+
+    // check ABE matches
+    memset(& arg, 0, sizeof(arg));
+    cli.process("ABE1234\r\n");
+    EXPECT_EQ(arg.action, & b);
+    EXPECT_EQ(arg.argc, 1);
+
+    // No matching command
+    memset(& arg, 0, sizeof(arg));
+    err_fn(0, 0, CLI::ERR_NONE);
+
+    cli.process("X");
+    EXPECT_EQ(arg.action, (void*)0);
+    EXPECT_EQ(arg.argc, 0);
+    EXPECT_EQ(err_info.cursor, 1);
+    EXPECT_EQ(err_info.err, CLI::ERR_UNKNOWN_CMD);
+
+    // Fail match part way in
+    memset(& arg, 0, sizeof(arg));
+    err_fn(0, 0, CLI::ERR_NONE);
+
+    cli.process("ABX");
+    EXPECT_EQ(arg.action, (void*)0);
+    EXPECT_EQ(arg.argc, 0);
+    EXPECT_EQ(err_info.cursor, 3);
+    EXPECT_EQ(err_info.err, CLI::ERR_UNKNOWN_CMD);
+
+    // Command match, no sep/num/sign
+    memset(& arg, 0, sizeof(arg));
+    err_fn(0, 0, CLI::ERR_NONE);
+
+    cli.process("ABEZ");
+    EXPECT_EQ(arg.action, (void*)0);
+    EXPECT_EQ(arg.argc, 0);
+    EXPECT_EQ(err_info.cursor, 4);
+    EXPECT_EQ(err_info.err, CLI::ERR_BAD_CHAR);
+
+    // seperators with no number are okay
+    memset(& arg, 0, sizeof(arg));
+    err_fn(0, 0, CLI::ERR_NONE);
+
+    cli.process("ABE,1,2\r\n");
+    EXPECT_EQ(arg.action, & b);
+    EXPECT_EQ(arg.argc, 2);
+    EXPECT_EQ(arg.values[0], 1);
+    EXPECT_EQ(arg.values[1], 2);
+    EXPECT_EQ(err_info.cursor, 0);
+    EXPECT_EQ(err_info.err, CLI::ERR_NONE);
+
+    // trailing seperators are bad
+    memset(& arg, 0, sizeof(arg));
+    err_fn(0, 0, CLI::ERR_NONE);
+
+    cli.process("ABE,1,\r\n");
+    EXPECT_EQ(arg.action, (void*)0);
+    EXPECT_EQ(arg.argc, 0);
+    EXPECT_EQ(err_info.cursor, 7);
+    EXPECT_EQ(err_info.err, CLI::ERR_NUM_EXPECTED);
+
+    // too many args
+    memset(& arg, 0, sizeof(arg));
+    err_fn(0, 0, CLI::ERR_NONE);
+
+    cli.process("ABE,1,2,3,4,5,6,7,8,9,0,");
+    EXPECT_EQ(arg.action, (void*)0);
+    EXPECT_EQ(arg.argc, 0);
+    EXPECT_EQ(err_info.cursor, 24);
+    EXPECT_EQ(err_info.err, CLI::ERR_TOO_LONG);
+
+    // bad sign
+    memset(& arg, 0, sizeof(arg));
+    err_fn(0, 0, CLI::ERR_NONE);
+
+    cli.process("ABE,1,3+\r\n");
+    EXPECT_EQ(arg.action, (void*)0);
+    EXPECT_EQ(arg.argc, 0);
+    EXPECT_EQ(err_info.cursor, 8);
+    EXPECT_EQ(err_info.err, CLI::ERR_BAD_SIGN);
+
 }
 
     /*
