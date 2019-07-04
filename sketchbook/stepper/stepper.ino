@@ -39,16 +39,22 @@ static void on_z(Action *action, int argc, int *argv)
     s->zero(argv[0]);
 }
 
-static void on_p(Action *action, int argc, int *argv)
+static void on_pos(Action *action, int argc, int *argv)
 {
     Stepper *s = (Stepper*) action->arg;
     s->rotate(s->get_target() + argv[0]);
 }
 
-static void on_m(Action *action, int argc, int *argv)
+static void on_neg(Action *action, int argc, int *argv)
 {
     Stepper *s = (Stepper*) action->arg;
     s->rotate(s->get_target() - argv[0]);
+}
+
+static void on_p(Action *action, int argc, int *argv)
+{
+    Stepper *s = (Stepper*) action->arg;
+    s->power(argv[0]);
 }
 
     /*
@@ -60,8 +66,9 @@ static Action actions[] = {
     { "S", on_s, & stepper, 0 },
     { "R", on_r, & stepper, 0 },
     { "Z", on_z, & stepper, 0 },
-    { "+", on_p, & stepper, 0 },
-    { "-", on_m, & stepper, 0 },
+    { "+", on_pos, & stepper, 0 },
+    { "-", on_neg, & stepper, 0 },
+    { "P", on_p, & stepper, 0 },
     { '\0', 0, 0, 0 },
 };
 

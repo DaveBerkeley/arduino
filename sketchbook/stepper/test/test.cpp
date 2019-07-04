@@ -303,10 +303,8 @@ static void err_fn(Action *a, int cursor, CLI::Error err)
     err_info.err = err;
 }
 
-void x() { }
 TEST(Cli, ErrorFn)
 {
-    x();
     CLI cli;
     CliArg arg;
 
@@ -839,6 +837,42 @@ TEST(Motor, SetZero)
     stepper.zero();
     EXPECT_EQ(stepper.position(), 0);
     EXPECT_TRUE(stepper.ready());
+
+    mock_teardown();
+}
+
+    /*
+     *
+     */
+
+TEST(Motor, Power)
+{
+    mock_setup();
+    int cycle = 360;
+    MotorIo_4 motor(1, 2, 3, 4);
+    Stepper stepper(cycle, & motor);
+
+    stepper.zero(100);
+    EXPECT_EQ(stepper.position(), 100);
+    EXPECT_TRUE(stepper.ready());
+
+    int pins[4] = { 0, 0, 0, 0 };
+
+    for (int i = 0; i < 4; i++)
+    {
+        pins[i] = digitalRead(i+1);
+    }
+
+    stepper.power(false);
+
+    int zero[4] = { 0, 0, 0, 0 };
+
+    // all pins low
+    EXPECT_TRUE(pins_match(4, 1, zero));
+
+    stepper.power(true);
+    // pins restored
+    EXPECT_TRUE(pins_match(4, 1, pins));
 
     mock_teardown();
 }

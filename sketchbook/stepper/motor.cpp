@@ -55,6 +55,21 @@ void MotorIo_4::step(bool up)
     set_state(s);
 }
 
+void MotorIo_4::power(bool on)
+{
+    if (on)
+    {
+        set_state(state);
+    }
+    else
+    {
+        for (int i = 0; i < PINS; i++)
+        {
+            digitalWrite(pins[i], on);
+        }
+    }
+}
+
   /*
   *
   */
@@ -83,6 +98,11 @@ void Stepper::step(bool up)
     if (c >= steps)
         c -= steps;
     count = c;
+}
+
+void Stepper::power(bool on)
+{
+    io->power(on);
 }
 
 int Stepper::position()

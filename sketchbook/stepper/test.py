@@ -72,14 +72,17 @@ time.sleep(1);
 try:
 
     while False:
-        x = [ str(random.randint(0, end_stop-1)) for i in range(5) ]
-        command("X" + ",".join(x))
-        time.sleep(0.1)
+        j = random.randint(0, end_stop-1)
+        command("G%d" % j);
+        motor.wait_for(j)
+        time.sleep(0.5)
 
-        while not motor.ready():
-            time.sleep(0.1)
-            if motor.ready():
-                break
+        while True:
+            command("P0") # power off
+            time.sleep(0.01)
+            command("P1") # power on
+            time.sleep(0.01)
+
     while True:
         for z in range(0, end_stop, 100):
 

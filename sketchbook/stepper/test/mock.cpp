@@ -35,6 +35,13 @@ void digitalWrite(int pin, int value)
     pins[pin] = value ? 1 : 0;
 }
 
+bool digitalRead(int pin)
+{
+    ASSERT(pin >= PIN_MIN);
+    ASSERT(pin < PIN_MAX);
+    return pins[pin];
+}
+
 bool pins_match(int num, int start, const int *p)
 {
     ASSERT(start >= PIN_MIN);

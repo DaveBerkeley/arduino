@@ -13,6 +13,7 @@ class MotorIo
 {
 public:
     virtual void step(bool up) = 0;
+    virtual void power(bool on) = 0;
 };
 
     /*
@@ -35,6 +36,7 @@ public:
     MotorIo_4(int p1, int p2, int p3, int p4);
 
     virtual void step(bool up);
+    virtual void power(bool on);
 };
 
    /*
@@ -72,6 +74,7 @@ public:
     void zero(int t=0);
     void set_steps(int s);
     void poll();
+    void power(bool on);
 };
 
 // FIN

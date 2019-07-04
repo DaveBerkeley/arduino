@@ -19,6 +19,7 @@ enum {
 };
 
 void digitalWrite(int pin, int value);
+bool digitalRead(int pin);
 
 void delayMicroseconds(int us);
 void delay(int ms);
